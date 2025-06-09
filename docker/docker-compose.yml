@@ -1,0 +1,85 @@
+version: '3.8'
+
+services:
+  openproblems-mcp:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    container_name: openproblems-spatial-mcp
+    restart: unless-stopped
+
+    # Environment variables
+    environment:
+      - PYTHONUNBUFFERED=1
+      - MCP_SERVER_NAME=OpenProblems-SpatialAI-MCP
+      - MCP_SERVER_VERSION=0.1.0
+
+    # Volumes for data persistence and Docker socket access
+    volumes:
+      - ../data:/app/data:rw
+      - ../work:/app/work:rw
+      - ../logs:/app/logs:rw
+      - /var/run/docker.sock:/var/run/docker.sock:ro  # For Docker-in-Docker operations
+
+    # Network configuration
+    networks:
+      - openproblems-network
+
+    # Resource limits
+    deploy:
+      resources:
+        limits:
+          memory: 4G
+          cpus: '2.0'
+        reservations:
+          memory: 1G
+          cpus: '0.5'
+
+    # Health check
+    healthcheck:
+      test: ["CMD", "python", "-c", "import mcp; print('MCP SDK available')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+    # Logging configuration
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # Optional: Add a reverse proxy for HTTP transport
+  nginx-proxy:
+    image: nginx:alpine
+    container_name: openproblems-mcp-proxy
+    restart: unless-stopped
+    depends_on:
+      - openproblems-mcp
+    ports:
+      - "8080:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+    networks:
+      - openproblems-network
+    profiles:
+      - http-transport
+
+# Networks
+networks:
+  openproblems-network:
+    driver: bridge
+    name: openproblems-spatial-network
+
+# Volumes for data persistence
+volumes:
+  data-volume:
+    driver: local
+    name: openproblems-data
+  work-volume:
+    driver: local
+    name: openproblems-work
+  logs-volume:
+    driver: local
+    name: openproblems-logs

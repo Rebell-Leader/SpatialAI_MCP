@@ -1,0 +1,100 @@
+# OpenProblems Spatial Transcriptomics MCP Server Configuration
+
+server:
+  name: "OpenProblems-SpatialAI-MCP"
+  version: "0.1.0"
+  description: "Model Context Protocol server for spatial transcriptomics workflows"
+
+  # Communication settings
+  transport:
+    primary: "stdio"     # Primary transport method
+    secondary: "http"    # Optional HTTP transport
+    http_port: 8000
+
+  # Resource limits
+  execution:
+    nextflow_timeout: 3600     # 1 hour timeout for Nextflow workflows
+    viash_timeout: 1800        # 30 minutes timeout for Viash components
+    docker_timeout: 1800       # 30 minutes timeout for Docker builds
+    max_concurrent_jobs: 3     # Maximum concurrent tool executions
+
+  # Logging configuration
+  logging:
+    level: "INFO"
+    format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+    file: "/app/logs/mcp_server.log"
+    max_size: "10MB"
+    backup_count: 5
+
+# Directory paths
+paths:
+  data_dir: "/app/data"
+  work_dir: "/app/work"
+  logs_dir: "/app/logs"
+  cache_dir: "/app/cache"
+
+# Tool configurations
+tools:
+  nextflow:
+    default_profile: "docker"
+    config_file: null
+    enable_resume: true
+    enable_tower: false
+
+  viash:
+    default_engine: "docker"
+    cache_docker_images: true
+
+  docker:
+    registry: "docker.io"
+    enable_buildkit: true
+    default_platform: "linux/amd64"
+
+# Resource configurations
+resources:
+  documentation:
+    auto_update: false
+    cache_duration: 3600  # Cache docs for 1 hour
+
+  templates:
+    source_repos:
+      - "https://github.com/openproblems-bio/task_ist_preprocessing"
+      - "https://github.com/openproblems-bio/task_spatial_simulators"
+      - "https://github.com/openpipelines-bio/openpipeline"
+      - "https://github.com/aertslab/SpatialNF"
+
+  spatial_data:
+    supported_formats: ["h5ad", "zarr", "csv", "tsv"]
+    max_file_size: "10GB"
+
+# Security settings
+security:
+  enable_authentication: false
+  allowed_hosts: ["localhost", "127.0.0.1"]
+  sandbox_mode: true  # Run tools in sandboxed environment
+
+# Feature flags
+features:
+  enable_experimental_tools: false
+  enable_remote_execution: false
+  enable_gpu_support: false
+  enable_notifications: true
+
+# Environment-specific configurations
+environments:
+  development:
+    logging:
+      level: "DEBUG"
+    security:
+      sandbox_mode: false
+    features:
+      enable_experimental_tools: true
+
+  production:
+    logging:
+      level: "INFO"
+    security:
+      sandbox_mode: true
+      enable_authentication: true
+    execution:
+      max_concurrent_jobs: 5

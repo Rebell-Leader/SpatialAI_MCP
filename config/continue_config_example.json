@@ -1,0 +1,59 @@
+{
+  "models": [
+    {
+      "title": "Claude 3.5 Sonnet",
+      "provider": "anthropic",
+      "model": "claude-3-5-sonnet-20241022",
+      "apiKey": "your-anthropic-api-key-here"
+    }
+  ],
+  "experimental": {
+    "modelContextProtocolServers": [
+      {
+        "name": "openproblems-spatial",
+        "transport": {
+          "type": "stdio",
+          "command": "python",
+          "args": ["-m", "mcp_server.main"],
+          "cwd": "/home/obi/SpatialAI_MCP"
+        }
+      }
+    ]
+  },
+  "docs": [
+    {
+      "title": "Nextflow Documentation",
+      "startUrl": "https://www.nextflow.io/docs/latest/"
+    },
+    {
+      "title": "Viash Documentation",
+      "startUrl": "https://viash.io/docs/"
+    },
+    {
+      "title": "OpenProblems GitHub",
+      "startUrl": "https://github.com/openproblems-bio/openproblems-v2"
+    },
+    {
+      "title": "Spatial Transcriptomics Task",
+      "startUrl": "https://github.com/openproblems-bio/task_spatial_decomposition"
+    },
+    {
+      "title": "Scanpy Documentation",
+      "startUrl": "https://scanpy.readthedocs.io/"
+    },
+    {
+      "title": "Squidpy Documentation",
+      "startUrl": "https://squidpy.readthedocs.io/"
+    }
+  ],
+  "contextProviders": [
+    {
+      "name": "codebase",
+      "params": {}
+    },
+    {
+      "name": "folder",
+      "params": {}
+    }
+  ]
+}
