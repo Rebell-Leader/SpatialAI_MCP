@@ -38,14 +38,8 @@ def serve(host, port, transport):
     click.echo("🚀 Starting OpenProblems Spatial Transcriptomics MCP Server")
     click.echo(f"   Transport: {transport}")
 
-    if transport == "http":
-        click.echo(f"   Host: {host}")
-        click.echo(f"   Port: {port}")
-        click.echo("   Note: HTTP transport is not yet implemented")
-        sys.exit(1)
-
     try:
-        asyncio.run(run_server())
+        asyncio.run(run_server(transport=transport, host=host, port=port))
     except KeyboardInterrupt:
         click.echo("\n👋 Server stopped")
     except Exception as e:
@@ -262,6 +256,27 @@ def tool(tool_name, arguments):
             sys.exit(1)
 
     asyncio.run(run_tool())
+
+
+@cli.command()
+@click.option("--port", default=7860, help="Port for the web interface")
+@click.option("--share", is_flag=True, help="Create a public link for sharing")
+def web(port, share):
+    """Launch the Gradio web interface for testing MCP tools."""
+    click.echo("🌐 Starting OpenProblems MCP Server Web Interface...")
+    click.echo(f"   Port: {port}")
+    if share:
+        click.echo("   Sharing: Enabled (creating public link)")
+
+    try:
+        from .gradio_interface import launch_gradio_interface
+        launch_gradio_interface(share=share, server_port=port)
+    except ImportError:
+        click.echo("❌ Gradio not installed. Install with: pip install gradio", err=True)
+        sys.exit(1)
+    except Exception as e:
+        click.echo(f"❌ Web interface error: {e}", err=True)
+        sys.exit(1)
 
 
 @cli.command()

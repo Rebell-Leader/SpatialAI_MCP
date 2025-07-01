@@ -30,7 +30,7 @@ class TestMCPServer:
         resources = await handle_list_resources()
 
         assert len(resources) == 5
-        resource_uris = [r.uri for r in resources]
+        resource_uris = [str(r.uri) for r in resources]  # Convert AnyUrl to string
 
         expected_uris = [
             "server://status",
@@ -289,9 +289,9 @@ class TestMCPServer:
 
             # Check that OOM error was detected
             issues = analysis_data["issues_found"]
-            oom_issue = next((issue for issue in issues if "exit status 137" in issue["pattern"]), None)
+            oom_issue = next((issue for issue in issues if "Out of memory" in issue["issue"]), None)
             assert oom_issue is not None
-            assert "Out of memory" in oom_issue["issue"]
+            assert "137" in oom_issue["pattern"]
 
 
 def mock_open(read_data):

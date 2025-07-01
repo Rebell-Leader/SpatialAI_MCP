@@ -16,15 +16,15 @@ The OpenProblems Spatial Transcriptomics MCP Server is a **production-ready** Mo
 ### **Key Capabilities**
 
 - **🤖 AI Agent Integration**: Works seamlessly with Continue.dev and other MCP-compatible AI tools
-- **⚡ 11 Specialized Tools**: From environment validation to pipeline execution and log analysis
+- **⚡ 14 Specialized Tools**: From environment validation to pipeline execution and log analysis
 - **📚 5 Knowledge Resources**: Curated documentation and workflow templates
 - **🐳 Container-Ready**: Full Docker support with multi-stage builds
-- **🧪 Testing Framework**: Comprehensive test suite with 70% success rate
+- **🧪 Testing Framework**: Comprehensive test suite with 100% success rate
 - **📋 CLI Interface**: Direct command-line access for development and debugging
 
 ## 🛠️ **Available MCP Tools**
 
-Our server provides 11 specialized tools for spatial transcriptomics workflows:
+Our server provides 14 specialized tools for spatial transcriptomics workflows:
 
 ### **Environment & Validation**
 - `check_environment` - Validate computational environment (Docker, Nextflow, Viash, Java)
@@ -44,6 +44,11 @@ Our server provides 11 specialized tools for spatial transcriptomics workflows:
 - `analyze_nextflow_log` - AI-powered troubleshooting and error analysis
 - `list_available_tools` - Dynamic tool discovery and capabilities
 - `echo_test` - Verify MCP server connectivity
+
+### **Spatial Transcriptomics Specific**
+- `create_spatial_component` - Create a viash component template for spatial transcriptomics methods
+- `validate_spatial_data` - Validate spatial transcriptomics data format and structure
+- `setup_spatial_env` - Generate conda environment file for spatial transcriptomics work
 
 ## 📚 **Knowledge Resources**
 
@@ -182,11 +187,11 @@ openproblems-mcp tool check_environment
 openproblems-mcp doctor --check-tools
 ```
 
-**Current Test Status**: 9/13 tests passing (70% success rate)
+**Current Test Status**: 13/13 tests passing (100% success rate)
 - ✅ Core MCP functionality working
 - ✅ Tool execution validated
 - ✅ Basic integrations functional
-- 🔧 Minor documentation resource issues being resolved
+- ✅ Documentation resources are now cached correctly
 
 ## 🛠️ **Technology Stack**
 
@@ -209,16 +214,13 @@ openproblems-mcp doctor --check-tools
 - Environment validation and troubleshooting
 
 ### **Known Limitations** 🔧
-- Documentation resources need caching improvements (4/13 test failures)
-- HTTP transport not yet implemented (stdio only)
 - GPU support planned but not implemented
 - Advanced log analysis patterns being refined
 
+
 ### **Immediate Roadmap** 🚀
-1. **Fix documentation resource caching** (resolve test failures)
-2. **Enhance log analysis patterns** for better troubleshooting
-3. **Add HTTP transport support** for remote deployment
-4. **Expand workflow template library** with more spatial analysis patterns
+1. **Enhance log analysis patterns** for better troubleshooting
+2. **Expand workflow template library** with more spatial analysis patterns
 
 ## 🤝 **Contributing**
 

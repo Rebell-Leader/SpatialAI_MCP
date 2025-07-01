@@ -60,7 +60,7 @@ async def demo_mcp_interaction():
                     "echo_test",
                     arguments={"message": "Hello from MCP client!"}
                 )
-                print(f"Echo response: {echo_result}")
+                print(f"Echo response: {echo_result[0].text}")
 
                 # Read server status
                 print("\n📊 Server Status:")
@@ -95,7 +95,7 @@ async def demo_mcp_interaction():
                 print("-" * 30)
                 try:
                     tools_result = await session.call_tool("list_available_tools", arguments={})
-                    tools_data = json.loads(tools_result)
+                    tools_data = json.loads(tools_result[0].text)
                     for tool in tools_data:
                         print(f"  • {tool['name']}")
                         print(f"    Description: {tool['description']}")
@@ -205,7 +205,7 @@ Execution failed
                         arguments={"log_file_path": str(mock_log_path)}
                     )
 
-                    analysis_data = json.loads(log_analysis)
+                    analysis_data = json.loads(log_analysis[0].text)
                     print(f"Log analysis completed:")
                     print(f"  File size: {analysis_data['file_size']} bytes")
                     print(f"  Execution status: {analysis_data['execution_status']}")

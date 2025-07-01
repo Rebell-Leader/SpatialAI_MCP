@@ -1,61 +1,20 @@
-# Docker Best Practices for Bioinformatics
-
-## Multi-stage Builds
-
-### Optimized Python Environment
-```dockerfile
-# Build stage
-FROM python:3.9-slim as builder
-WORKDIR /build
-COPY requirements.txt .
-RUN pip install --no-cache-dir --user -r requirements.txt
-
-# Production stage
-FROM python:3.9-slim
-COPY --from=builder /root/.local /root/.local
-RUN apt-get update && apt-get install -y procps
-WORKDIR /app
-```
-
-### Bioinformatics Stack
-```dockerfile
-FROM python:3.9-slim
-
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    libhdf5-dev \
-    libblas-dev \
-    liblapack-dev \
-    && rm -rf /var/lib/apt/lists/*
-
-RUN pip install --no-cache-dir \
-    scanpy>=1.9.0 \
-    anndata>=0.8.0 \
-    pandas>=1.5.0 \
-    numpy>=1.21.0
-
-WORKDIR /app
-```
-
-### OpenProblems Compatible Container
-```dockerfile
-FROM python:3.9-slim
-
-RUN apt-get update && apt-get install -y procps
-RUN pip install --no-cache-dir scanpy anndata pandas numpy
-
-# Create non-root user for Nextflow
-RUN groupadd -g 1000 nextflow && \
-    useradd -u 1000 -g nextflow nextflow
-
-USER nextflow
-WORKDIR /app
-ENTRYPOINT ["python"]
-```
-
-## Best Practices
-- Use specific versions for reproducibility
-- Use minimal base images
-- Create non-root users
-- Combine RUN commands to reduce layers
-- Use health checks for services
-- Set appropriate resource limits
+{
+  "overview": "Docker best practices for bioinformatics workflows",
+  "dockerfile_optimization": {
+    "multi_stage_builds": "Use multi-stage builds to reduce image size",
+    "base_images": "Use minimal base images like python:3.9-slim",
+    "layer_caching": "Combine RUN commands to reduce layers",
+    "user_security": "Create non-root users for security"
+  },
+  "bioinformatics_specific": {
+    "dependencies": "Install common bio packages: scanpy, anndata, pandas",
+    "resources": "Set appropriate memory and CPU limits",
+    "nextflow_compatibility": "Ensure containers work with Nextflow",
+    "health_checks": "Include health checks for services"
+  },
+  "common_patterns": {
+    "python_bio": "FROM python:3.9-slim + bio packages",
+    "nextflow_user": "Create user with uid 1000 for Nextflow",
+    "apt_cleanup": "Remove apt cache to reduce size"
+  }
+}

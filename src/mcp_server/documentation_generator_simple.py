@@ -39,187 +39,59 @@ class DocumentationGenerator:
         return documentation
 
     def _generate_nextflow_docs(self) -> str:
-        """Generate Nextflow documentation."""
-        return """# Nextflow DSL2 Best Practices Guide
-
-## Overview
-Nextflow enables scalable and reproducible scientific workflows using software containers.
-
-## Essential DSL2 Patterns
-
-### Basic Pipeline Structure
-```nextflow
-#!/usr/bin/env nextflow
-nextflow.enable.dsl=2
-
-params.input = './data/*.h5ad'
-params.output_dir = './results'
-
-workflow {
-    input_ch = Channel.fromPath(params.input)
-    PROCESS_NAME(input_ch)
-}
-```
-
-### Process Definition
-```nextflow
-process SPATIAL_ANALYSIS {
-    tag "$sample_id"
-    label 'process_medium'
-    container 'quay.io/biocontainers/scanpy:1.9.1--pyhd8ed1ab_0'
-    publishDir "${params.output_dir}/analysis", mode: 'copy'
-
-    input:
-    tuple val(sample_id), path(spatial_data)
-
-    output:
-    tuple val(sample_id), path("${sample_id}_analyzed.h5ad"), emit: analyzed
-    path "${sample_id}_metrics.json", emit: metrics
-
-    script:
-    \"\"\"
-    #!/usr/bin/env python
-    import scanpy as sc
-    import json
-
-    adata = sc.read_h5ad('${spatial_data}')
-    sc.pp.filter_cells(adata, min_genes=200)
-    sc.pp.filter_genes(adata, min_cells=3)
-    adata.write('${sample_id}_analyzed.h5ad')
-
-    metrics = {'n_cells': adata.n_obs, 'n_genes': adata.n_vars}
-    with open('${sample_id}_metrics.json', 'w') as f:
-        json.dump(metrics, f, indent=2)
-    \"\"\"
-}
-```
-
-## Resource Management
-```nextflow
-process {
-    withLabel: 'process_low' {
-        cpus = 2
-        memory = '4.GB'
-        time = '1.h'
-    }
-    withLabel: 'process_medium' {
-        cpus = 4
-        memory = '8.GB'
-        time = '2.h'
-    }
-    withLabel: 'process_high' {
-        cpus = 8
-        memory = '16.GB'
-        time = '4.h'
-    }
-}
-
-docker {
-    enabled = true
-    runOptions = '-u $(id -u):$(id -g)'
-}
-```
-
-## Error Handling
-```nextflow
-process ROBUST_PROCESS {
-    errorStrategy 'retry'
-    maxRetries 3
-
-    script:
-    \"\"\"
-    set -euo pipefail
-    # Your analysis code here
-    \"\"\"
-}
-```
-
-## Common Issues and Solutions
-1. **Out of Memory**: Increase memory allocation
-2. **File Not Found**: Check file paths and staging
-3. **Container Issues**: Verify container accessibility
-4. **Process Hanging**: Check resource requirements
-"""
+        """Generate Nextflow documentation as a JSON string."""
+        nextflow_docs = {
+            "overview": "Nextflow is a workflow framework for bioinformatics pipelines",
+            "best_practices": {
+                "dsl_version": "Use DSL2 for all new workflows",
+                "resource_management": "Specify memory and CPU requirements for each process",
+                "error_handling": "Implement retry strategies and error handling",
+                "containerization": "Use Docker/Singularity containers for reproducibility",
+            },
+            "common_patterns": {
+                "input_channels": "Use Channel.fromPath() for file inputs",
+                "output_publishing": "Use publishDir directive for results",
+                "conditional_execution": "Use when clause for conditional processes",
+            },
+            "troubleshooting": {
+                "oom_errors": "Increase memory allocation or implement dynamic resource allocation",
+                "missing_files": "Check file paths and ensure proper input staging",
+                "container_issues": "Verify container availability and permissions",
+            },
+            "code_examples": {
+                "basic_pipeline": "#!/usr/bin/env nextflow\nnextflow.enable.dsl=2\n...",
+                "process_definition": "process SPATIAL_ANALYSIS { ... }"
+            }
+        }
+        return json.dumps(nextflow_docs, indent=2)
 
     def _generate_viash_docs(self) -> str:
-        """Generate Viash documentation."""
-        return """# Viash Component Architecture Guide
-
-## Overview
-Viash enables building reusable, portable components across Docker, native, and Nextflow platforms.
-
-## Component Structure
-
-### Configuration File (config.vsh.yaml)
-```yaml
-name: "spatial_qc"
-description: "Spatial transcriptomics quality control component"
-
-argument_groups:
-  - name: "Input/Output"
-    arguments:
-      - name: "--input"
-        type: "file"
-        description: "Input spatial data (h5ad format)"
-        required: true
-      - name: "--output"
-        type: "file"
-        direction: "output"
-        description: "Output filtered data"
-        required: true
-
-  - name: "Parameters"
-    arguments:
-      - name: "--min_genes"
-        type: "integer"
-        description: "Minimum genes per cell"
-        default: 200
-
-resources:
-  - type: "python_script"
-    path: "script.py"
-
-platforms:
-  - type: "docker"
-    image: "quay.io/biocontainers/scanpy:1.9.1--pyhd8ed1ab_0"
-  - type: "nextflow"
-```
-
-### Script Implementation
-```python
-import argparse
-import scanpy as sc
-import json
-
-parser = argparse.ArgumentParser()
-parser.add_argument('--input', required=True)
-parser.add_argument('--output', required=True)
-parser.add_argument('--min_genes', type=int, default=200)
-args = parser.parse_args()
-
-adata = sc.read_h5ad(args.input)
-sc.pp.filter_cells(adata, min_genes=args.min_genes)
-adata.write(args.output)
-```
-
-## Development Workflow
-```bash
-# Build component
-viash build config.vsh.yaml -p docker
-
-# Test component
-viash test config.vsh.yaml
-
-# Build for Nextflow
-viash build config.vsh.yaml -p nextflow -o target/nextflow/
-```
-
-## Best Practices
-1. **Single Responsibility**: Each component should do one thing well
-2. **Clear Interfaces**: Well-defined inputs and outputs
-3. **Comprehensive Testing**: Unit tests for all functionality
-4. **Documentation**: Clear descriptions and examples
-"""
+        """Generate Viash documentation as a JSON string."""
+        viash_docs = {
+            "overview": "Viash is a meta-framework for building reusable workflow modules",
+            "component_structure": {
+                "config_file": "YAML configuration defining component metadata",
+                "script": "Core functionality implementation",
+                "platforms": "Target platforms (docker, native, nextflow)",
+            },
+            "best_practices": {
+                "modularity": "Keep components focused on single tasks",
+                "documentation": "Provide clear descriptions and examples",
+                "testing": "Include unit tests for all components",
+                "versioning": "Use semantic versioning for component releases",
+            },
+            "common_commands": {
+                "build": "viash build config.vsh.yaml",
+                "run": "viash run config.vsh.yaml",
+                "test": "viash test config.vsh.yaml",
+                "ns_build": "viash ns build",
+            },
+            "code_examples": {
+                "config_file": "name: 'spatial_qc'\ndescription: '...'\n...",
+                "script_implementation": "import argparse\n..."
+            }
+        }
+        return json.dumps(viash_docs, indent=2)
 
     def _generate_openproblems_docs(self) -> str:
         """Generate OpenProblems documentation."""
@@ -286,225 +158,66 @@ adata_reference = ad.read_h5ad('reference_data.h5ad')
 
     def _generate_docker_docs(self) -> str:
         """Generate Docker documentation."""
-        return """# Docker Best Practices for Bioinformatics
-
-## Multi-stage Builds
-
-### Optimized Python Environment
-```dockerfile
-# Build stage
-FROM python:3.9-slim as builder
-WORKDIR /build
-COPY requirements.txt .
-RUN pip install --no-cache-dir --user -r requirements.txt
-
-# Production stage
-FROM python:3.9-slim
-COPY --from=builder /root/.local /root/.local
-RUN apt-get update && apt-get install -y procps
-WORKDIR /app
-```
-
-### Bioinformatics Stack
-```dockerfile
-FROM python:3.9-slim
-
-RUN apt-get update && apt-get install -y --no-install-recommends \\
-    libhdf5-dev \\
-    libblas-dev \\
-    liblapack-dev \\
-    && rm -rf /var/lib/apt/lists/*
-
-RUN pip install --no-cache-dir \\
-    scanpy>=1.9.0 \\
-    anndata>=0.8.0 \\
-    pandas>=1.5.0 \\
-    numpy>=1.21.0
-
-WORKDIR /app
-```
-
-### OpenProblems Compatible Container
-```dockerfile
-FROM python:3.9-slim
-
-RUN apt-get update && apt-get install -y procps
-RUN pip install --no-cache-dir scanpy anndata pandas numpy
-
-# Create non-root user for Nextflow
-RUN groupadd -g 1000 nextflow && \\
-    useradd -u 1000 -g nextflow nextflow
-
-USER nextflow
-WORKDIR /app
-ENTRYPOINT ["python"]
-```
-
-## Best Practices
-- Use specific versions for reproducibility
-- Use minimal base images
-- Create non-root users
-- Combine RUN commands to reduce layers
-- Use health checks for services
-- Set appropriate resource limits
-"""
+        docker_docs = {
+            "overview": "Docker best practices for bioinformatics workflows",
+            "dockerfile_optimization": {
+                "multi_stage_builds": "Use multi-stage builds to reduce image size",
+                "base_images": "Use minimal base images like python:3.9-slim",
+                "layer_caching": "Combine RUN commands to reduce layers",
+                "user_security": "Create non-root users for security"
+            },
+            "bioinformatics_specific": {
+                "dependencies": "Install common bio packages: scanpy, anndata, pandas",
+                "resources": "Set appropriate memory and CPU limits",
+                "nextflow_compatibility": "Ensure containers work with Nextflow",
+                "health_checks": "Include health checks for services"
+            },
+            "common_patterns": {
+                "python_bio": "FROM python:3.9-slim + bio packages",
+                "nextflow_user": "Create user with uid 1000 for Nextflow",
+                "apt_cleanup": "Remove apt cache to reduce size"
+            }
+        }
+        return json.dumps(docker_docs, indent=2)
 
     def _generate_spatial_templates(self) -> str:
         """Generate spatial workflow templates."""
-        return """# Spatial Transcriptomics Pipeline Templates
-
-## 1. Quality Control Workflow
-
-```nextflow
-#!/usr/bin/env nextflow
-nextflow.enable.dsl=2
-
-params.input_pattern = "*.h5ad"
-params.output_dir = "./results"
-params.min_genes_per_cell = 200
-
-process SPATIAL_QC {
-    tag "$sample_id"
-    label 'process_medium'
-    container 'quay.io/biocontainers/scanpy:1.9.1--pyhd8ed1ab_0'
-    publishDir "${params.output_dir}/qc", mode: 'copy'
-
-    input:
-    tuple val(sample_id), path(spatial_data)
-
-    output:
-    tuple val(sample_id), path("${sample_id}_qc.h5ad"), emit: filtered_data
-    path "${sample_id}_metrics.json", emit: metrics
-
-    script:
-    \"\"\"
-    #!/usr/bin/env python
-    import scanpy as sc
-    import json
-
-    adata = sc.read_h5ad('${spatial_data}')
-
-    # QC metrics
-    adata.var['mt'] = adata.var_names.str.startswith('MT-')
-    sc.pp.calculate_qc_metrics(adata, percent_top=None, log1p=False, inplace=True)
-
-    # Filter cells and genes
-    sc.pp.filter_cells(adata, min_genes=${params.min_genes_per_cell})
-    sc.pp.filter_genes(adata, min_cells=3)
-
-    adata.write('${sample_id}_qc.h5ad')
-
-    metrics = {
-        'sample_id': '${sample_id}',
-        'n_cells': int(adata.n_obs),
-        'n_genes': int(adata.n_vars)
-    }
-
-    with open('${sample_id}_metrics.json', 'w') as f:
-        json.dump(metrics, f, indent=2)
-    \"\"\"
-}
-
-workflow {
-    input_ch = Channel.fromPath(params.input_pattern)
-        .map { file -> [file.baseName, file] }
-
-    SPATIAL_QC(input_ch)
-}
-```
-
-## 2. Spatial Decomposition Pipeline
-
-```nextflow
-process SPATIAL_DECOMPOSITION {
-    tag "$sample_id"
-    label 'process_high'
-    container 'openproblems/spatial-decomposition:latest'
-
-    input:
-    tuple val(sample_id), path(spatial_data), path(reference_data)
-
-    output:
-    tuple val(sample_id), path("${sample_id}_decomposition.h5ad"), emit: results
-    path "${sample_id}_proportions.csv", emit: proportions
-
-    script:
-    \"\"\"
-    #!/usr/bin/env python
-    import anndata as ad
-    import pandas as pd
-    import numpy as np
-
-    # Load data
-    adata_spatial = ad.read_h5ad('${spatial_data}')
-    adata_reference = ad.read_h5ad('${reference_data}')
-
-    # Find common genes
-    common_genes = adata_spatial.var_names.intersection(adata_reference.var_names)
-    adata_spatial = adata_spatial[:, common_genes].copy()
-    adata_reference = adata_reference[:, common_genes].copy()
-
-    # Get cell types
-    cell_types = adata_reference.obs['cell_type'].unique()
-
-    # Placeholder decomposition (replace with actual method)
-    n_spots = adata_spatial.n_obs
-    n_cell_types = len(cell_types)
-    proportions_matrix = np.random.dirichlet(np.ones(n_cell_types), size=n_spots)
-
-    # Create proportions DataFrame
-    proportions_df = pd.DataFrame(
-        proportions_matrix,
-        columns=cell_types,
-        index=adata_spatial.obs_names
-    )
-
-    proportions_df.to_csv('${sample_id}_proportions.csv')
-
-    # Add proportions to spatial data
-    for cell_type in cell_types:
-        adata_spatial.obs[f'prop_{cell_type}'] = proportions_df[cell_type].values
-
-    adata_spatial.write('${sample_id}_decomposition.h5ad')
-    \"\"\"
-}
-```
-
-## 3. Configuration Template
-
-```nextflow
-// nextflow.config
-params {
-    input_dir = './data'
-    output_dir = './results'
-    reference_data = './reference/atlas.h5ad'
-}
-
-process {
-    withLabel: 'process_medium' {
-        cpus = 4
-        memory = '8.GB'
-        time = '2.h'
-    }
-    withLabel: 'process_high' {
-        cpus = 8
-        memory = '16.GB'
-        time = '4.h'
-    }
-}
-
-docker {
-    enabled = true
-    runOptions = '-u $(id -u):$(id -g)'
-}
-```
-
-This provides:
-1. **Production-ready QC pipeline** with filtering and reporting
-2. **Spatial decomposition workflow** with evaluation metrics
-3. **Flexible configuration** for different environments
-4. **Comprehensive monitoring** and resource tracking
-"""
+        spatial_templates = {
+            "basic_preprocessing": {
+                "name": "Basic Spatial Preprocessing",
+                "description": "Quality control and basic preprocessing for spatial transcriptomics data",
+                "inputs": ["spatial_data.h5ad"],
+                "outputs": ["filtered_data.h5ad", "qc_metrics.json"],
+                "workflow": "nextflow spatial_qc.nf",
+                "parameters": {
+                    "min_genes_per_cell": 200,
+                    "min_cells_per_gene": 3
+                }
+            },
+            "spatially_variable_genes": {
+                "name": "Spatially Variable Gene Detection",
+                "description": "Identify genes with spatial expression patterns",
+                "inputs": ["spatial_data.h5ad"],
+                "outputs": ["svg_results.h5ad", "spatial_features.csv"],
+                "workflow": "nextflow svg_detection.nf",
+                "parameters": {
+                    "n_top_genes": 2000,
+                    "spatial_key": "spatial"
+                }
+            },
+            "label_transfer": {
+                "name": "Cell Type Label Transfer",
+                "description": "Transfer cell type labels from reference to spatial data",
+                "inputs": ["spatial_data.h5ad", "reference_data.h5ad"],
+                "outputs": ["labeled_spatial.h5ad", "transfer_scores.csv"],
+                "workflow": "nextflow label_transfer.nf",
+                "parameters": {
+                    "reference_key": "cell_type",
+                    "confidence_threshold": 0.5
+                }
+            }
+        }
+        return json.dumps(spatial_templates, indent=2)
 
     async def _save_documentation_cache(self, documentation: Dict[str, str]):
         """Save documentation to cache files."""
