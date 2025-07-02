@@ -14,7 +14,6 @@ import subprocess
 import sys
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
-from .documentation_generator_simple import DocumentationGenerator
 
 from mcp.server import Server
 from mcp.server.models import InitializationOptions
@@ -29,6 +28,10 @@ from mcp.types import (
 )
 import mcp.server.stdio
 
+# Import the new utils
+from ..utils.ai_assistant import LLMAssistant
+from ..utils.doc_indexer import EnhancedDocumentationIndexer
+
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -40,8 +43,9 @@ server = Server("OpenProblems-SpatialAI-MCP")
 SERVER_VERSION = "0.1.0"
 SERVER_NAME = "OpenProblems Spatial Transcriptomics MCP"
 
-# Initialize documentation generator
-doc_generator = DocumentationGenerator()
+# Initialize new utilities
+llm_assistant = LLMAssistant()
+doc_indexer = EnhancedDocumentationIndexer()
 
 
 @server.list_resources()
@@ -96,96 +100,18 @@ async def handle_read_resource(uri: str) -> str:
                 "viash_components": True,
                 "docker_builds": True,
                 "automated_testing": True,
-                "log_analysis": True,
+                "ai_code_analysis": True,
+                "ai_log_debugging": True,
+                "semantic_doc_search": True,
             },
             "supported_formats": ["h5ad", "json", "yaml", "nf", "vsh.yaml"],
             "documentation_available": True,
         }
         return json.dumps(status, indent=2)
 
-    elif uri == "documentation://nextflow":
-        # Try to load cached documentation first
-        cached_docs = await doc_generator.load_cached_documentation()
-        if "nextflow" in cached_docs and cached_docs["nextflow"].strip():
-            return cached_docs["nextflow"]
-        else:
-            # Fallback to basic documentation
-            nextflow_docs = {
-                "overview": "Nextflow is a workflow framework for bioinformatics pipelines",
-                "status": "Real documentation not yet cached - run 'python -m mcp_server.documentation_scraper' to download",
-                "best_practices": {
-                    "dsl_version": "Use DSL2 for all new workflows",
-                    "resource_management": "Specify memory and CPU requirements for each process",
-                    "error_handling": "Implement retry strategies and error handling",
-                    "containerization": "Use Docker/Singularity containers for reproducibility",
-                },
-                "common_patterns": {
-                    "input_channels": "Use Channel.fromPath() for file inputs",
-                    "output_publishing": "Use publishDir directive for results",
-                    "conditional_execution": "Use when clause for conditional processes",
-                },
-                "troubleshooting": {
-                    "oom_errors": "Increase memory allocation or implement dynamic resource allocation",
-                    "missing_files": "Check file paths and ensure proper input staging",
-                    "container_issues": "Verify container availability and permissions",
-                },
-            }
-            return json.dumps(nextflow_docs, indent=2)
-
-    elif uri == "documentation://viash":
-        # Try to load cached documentation first
-        cached_docs = await doc_generator.load_cached_documentation()
-        if "viash" in cached_docs and cached_docs["viash"].strip():
-            return cached_docs["viash"]
-        else:
-            # Fallback to basic documentation
-            viash_docs = {
-                "overview": "Viash is a meta-framework for building reusable workflow modules",
-                "status": "Real documentation not yet cached - run 'python -m mcp_server.documentation_scraper' to download",
-                "component_structure": {
-                    "config_file": "YAML configuration defining component metadata",
-                    "script": "Core functionality implementation",
-                    "platforms": "Target platforms (docker, native, nextflow)",
-                },
-                "best_practices": {
-                    "modularity": "Keep components focused on single tasks",
-                    "documentation": "Provide clear descriptions and examples",
-                    "testing": "Include unit tests for all components",
-                    "versioning": "Use semantic versioning for component releases",
-                },
-                "common_commands": {
-                    "build": "viash build config.vsh.yaml",
-                    "run": "viash run config.vsh.yaml",
-                    "test": "viash test config.vsh.yaml",
-                    "ns_build": "viash ns build",
-                },
-            }
-            return json.dumps(viash_docs, indent=2)
-
-    elif uri == "documentation://docker":
-        # Always return fallback documentation to ensure tests pass
-        try:
-            cached_docs = await doc_generator.load_cached_documentation()
-            if "docker" in cached_docs and cached_docs["docker"].strip():
-                return cached_docs["docker"]
-        except Exception:
-            pass
-        # Return generated Docker best practices (always valid JSON)
-        return doc_generator._generate_docker_docs()
-
-    elif uri == "templates://spatial-workflows":
-        # Always return fallback documentation to ensure tests pass
-        try:
-            cached_docs = await doc_generator.load_cached_documentation()
-            if "spatial_templates" in cached_docs and cached_docs["spatial_templates"].strip():
-                return cached_docs["spatial_templates"]
-        except Exception:
-            pass
-        # Return generated spatial workflow templates (always valid JSON)
-        return doc_generator._generate_spatial_templates()
-
-    else:
-        raise ValueError(f"Unknown resource URI: {uri}")
+    # For other resources, we can return a summary or a link to the Gradio UI
+    # where the full functionality is available.
+    return json.dumps({"message": f"Resource {uri} is available. Use the corresponding tool to interact with it."}, indent=2)
 
 
 @server.list_tools()
@@ -193,173 +119,58 @@ async def handle_list_tools() -> List[Tool]:
     """List available tools for spatial transcriptomics workflows."""
     return [
         Tool(
-            name="echo_test",
-            description="Simple echo test to verify MCP communication",
+            name="index_documentation",
+            description="Scrapes and indexes documentation from official sources for semantic search.",
+            inputSchema={}
+        ),
+        Tool(
+            name="search_documentation",
+            description="Performs a semantic search on the indexed documentation.",
             inputSchema={
                 "type": "object",
                 "properties": {
-                    "message": {
-                        "type": "string",
-                        "description": "Message to echo back"
-                    }
+                    "query": {"type": "string", "description": "The natural language query to search for."}
                 },
-                "required": ["message"]
+                "required": ["query"]
             }
         ),
         Tool(
-            name="list_available_tools",
-            description="List all available MCP tools and their descriptions",
-            inputSchema={
-                "type": "object",
-                "properties": {},
-            }
-        ),
-        Tool(
-            name="run_nextflow_workflow",
-            description="Execute a Nextflow pipeline from OpenProblems repositories",
+            name="analyze_code",
+            description="Analyzes spatial transcriptomics code using an AI assistant with documentation context.",
             inputSchema={
                 "type": "object",
                 "properties": {
-                    "workflow_name": {
-                        "type": "string",
-                        "description": "Name of the Nextflow workflow (e.g., main.nf)"
-                    },
-                    "github_repo_url": {
-                        "type": "string",
-                        "description": "GitHub URL of the repository containing the workflow"
-                    },
-                    "profile": {
-                        "type": "string",
-                        "description": "Nextflow profile to use (e.g., docker, test)",
-                        "default": "docker"
-                    },
-                    "params": {
-                        "type": "object",
-                        "description": "Key-value pairs for pipeline parameters",
-                        "default": {}
-                    },
-                    "config_file": {
-                        "type": "string",
-                        "description": "Path to custom Nextflow configuration file"
-                    }
+                    "code": {"type": "string", "description": "The Python code to analyze."},
+                    "context": {"type": "string", "description": "A brief description of what the code should accomplish."}
                 },
-                "required": ["workflow_name", "github_repo_url"]
+                "required": ["code", "context"]
             }
         ),
         Tool(
-            name="run_viash_component",
-            description="Execute a Viash component with specified parameters",
+            name="debug_logs",
+            description="Analyzes execution logs with an AI assistant to identify root causes and suggest fixes.",
             inputSchema={
                 "type": "object",
                 "properties": {
-                    "component_name": {
-                        "type": "string",
-                        "description": "Name of the Viash component"
-                    },
-                    "component_config_path": {
-                        "type": "string",
-                        "description": "Path to the Viash config file (.vsh.yaml)"
-                    },
-                    "engine": {
-                        "type": "string",
-                        "description": "Execution engine (native, docker)",
-                        "default": "docker"
-                    },
-                    "args": {
-                        "type": "object",
-                        "description": "Component-specific arguments",
-                        "default": {}
-                    }
+                    "logs": {"type": "string", "description": "The execution logs to debug."}
                 },
-                "required": ["component_name", "component_config_path"]
+                "required": ["logs"]
             }
         ),
         Tool(
-            name="build_docker_image",
-            description="Build a Docker image from a Dockerfile",
+            name="check_environment",
+            description="Check if required tools and dependencies are installed",
             inputSchema={
                 "type": "object",
                 "properties": {
-                    "dockerfile_path": {
-                        "type": "string",
-                        "description": "Path to the Dockerfile"
-                    },
-                    "image_tag": {
-                        "type": "string",
-                        "description": "Tag for the Docker image"
-                    },
-                    "context_path": {
-                        "type": "string",
-                        "description": "Build context directory",
-                        "default": "."
+                    "tools": {
+                        "type": "array",
+                        "items": {"type": "string"},
+                        "description": "List of tools to check (nextflow, viash, docker, java, etc.)",
+                        "default": ["nextflow", "viash", "docker", "java"]
                     }
                 },
-                "required": ["dockerfile_path", "image_tag"]
-            }
-        ),
-        Tool(
-            name="analyze_nextflow_log",
-            description="Analyze Nextflow execution logs for errors and troubleshooting",
-            inputSchema={
-                "type": "object",
-                "properties": {
-                    "log_file_path": {
-                        "type": "string",
-                        "description": "Path to the .nextflow.log file"
-                    }
-                },
-                "required": ["log_file_path"]
-            }
-        ),
-        Tool(
-            name="read_file",
-            description="Read contents of a file for analysis or editing",
-            inputSchema={
-                "type": "object",
-                "properties": {
-                    "file_path": {
-                        "type": "string",
-                        "description": "Path to the file to read"
-                    }
-                },
-                "required": ["file_path"]
-            }
-        ),
-        Tool(
-            name="write_file",
-            description="Write or create a file with specified content",
-            inputSchema={
-                "type": "object",
-                "properties": {
-                    "file_path": {
-                        "type": "string",
-                        "description": "Path to the file to write"
-                    },
-                    "content": {
-                        "type": "string",
-                        "description": "Content to write to the file"
-                    }
-                },
-                "required": ["file_path", "content"]
-            }
-        ),
-        Tool(
-            name="list_directory",
-            description="List contents of a directory",
-            inputSchema={
-                "type": "object",
-                "properties": {
-                    "directory_path": {
-                        "type": "string",
-                        "description": "Path to the directory to list"
-                    },
-                    "include_hidden": {
-                        "type": "boolean",
-                        "description": "Include hidden files and directories",
-                        "default": False
-                    }
-                },
-                "required": ["directory_path"]
+                "required": []
             }
         ),
         Tool(
@@ -381,72 +192,17 @@ async def handle_list_tools() -> List[Tool]:
             }
         ),
         Tool(
-            name="check_environment",
-            description="Check if required tools and dependencies are installed",
+            name="analyze_nextflow_log",
+            description="Analyze Nextflow execution logs for errors and troubleshooting",
             inputSchema={
                 "type": "object",
                 "properties": {
-                    "tools": {
-                        "type": "array",
-                        "items": {"type": "string"},
-                        "description": "List of tools to check (nextflow, viash, docker, java, etc.)",
-                        "default": ["nextflow", "viash", "docker", "java"]
+                    "log_file_path": {
+                        "type": "string",
+                        "description": "Path to the .nextflow.log file"
                     }
                 },
-                "required": []
-            }
-        ),
-        Tool(
-            name="create_spatial_component",
-            description="Create a viash component template for spatial transcriptomics methods",
-            inputSchema={
-                "type": "object",
-                "properties": {
-                    "name": {
-                        "type": "string",
-                        "description": "Name of the component/method"
-                    },
-                    "method_type": {
-                        "type": "string",
-                        "description": "Type of method (segmentation, assignment, etc.)",
-                        "default": "segmentation"
-                    },
-                    "output_dir": {
-                        "type": "string",
-                        "description": "Output directory for the component",
-                        "default": "."
-                    }
-                },
-                "required": ["name"]
-            }
-        ),
-        Tool(
-            name="validate_spatial_data",
-            description="Validate spatial transcriptomics data format and structure",
-            inputSchema={
-                "type": "object",
-                "properties": {
-                    "file_path": {
-                        "type": "string",
-                        "description": "Path to the spatial data file (zarr format)"
-                    }
-                },
-                "required": ["file_path"]
-            }
-        ),
-        Tool(
-            name="setup_spatial_env",
-            description="Generate conda environment file for spatial transcriptomics work",
-            inputSchema={
-                "type": "object",
-                "properties": {
-                    "env_name": {
-                        "type": "string",
-                        "description": "Name for the conda environment",
-                        "default": "spatial_transcriptomics"
-                    }
-                },
-                "required": []
+                "required": ["log_file_path"]
             }
         ),
     ]
@@ -457,240 +213,191 @@ async def handle_call_tool(name: str, arguments: Dict[str, Any]) -> List[TextCon
     """Handle tool execution requests."""
     logger.info(f"Executing tool: {name} with arguments: {arguments}")
 
-    if name == "echo_test":
-        message = arguments.get("message", "")
-        return [TextContent(type="text", text=f"Echo: {message}")]
+    if name == "index_documentation":
+        result = doc_indexer.index_documentation()
+        return [TextContent(type="text", text=result)]
 
-    elif name == "list_available_tools":
-        tools = await handle_list_tools()
-        tool_list = []
-        for tool in tools:
-            tool_list.append({
-                "name": tool.name,
-                "description": tool.description,
-                "required_params": tool.inputSchema.get("required", [])
-            })
-        return [TextContent(
-            type="text",
-            text=json.dumps(tool_list, indent=2)
-        )]
+    elif name == "search_documentation":
+        query = arguments.get("query", "")
+        results = doc_indexer.search_documentation(query)
+        return [TextContent(type="text", text=json.dumps(results, indent=2))]
 
-    elif name == "run_nextflow_workflow":
-        return await _execute_nextflow_workflow(arguments)
+    elif name == "analyze_code":
+        code = arguments.get("code", "")
+        context = arguments.get("context", "")
+        docs_context = doc_indexer.search_documentation(f"spatial transcriptomics {context} {code[:150]}", limit=3)
+        analysis = llm_assistant.analyze_with_context(code, "code", docs_context)
+        return [TextContent(type="text", text=analysis)]
 
-    elif name == "run_viash_component":
-        return await _execute_viash_component(arguments)
-
-    elif name == "build_docker_image":
-        return await _build_docker_image(arguments)
-
-    elif name == "analyze_nextflow_log":
-        return await _analyze_nextflow_log(arguments)
-
-    elif name == "read_file":
-        return await _read_file(arguments)
-
-    elif name == "write_file":
-        return await _write_file(arguments)
-
-    elif name == "list_directory":
-        return await _list_directory(arguments)
-
-    elif name == "validate_nextflow_config":
-        return await _validate_nextflow_config(arguments)
+    elif name == "debug_logs":
+        logs = arguments.get("logs", "")
+        docs_context = doc_indexer.search_documentation(f"nextflow error debugging {logs[:200]}", limit=3)
+        analysis = llm_assistant.analyze_with_context(logs, "logs", docs_context)
+        return [TextContent(type="text", text=analysis)]
 
     elif name == "check_environment":
         return await _check_environment(arguments)
 
-    elif name == "create_spatial_component":
-        return await _create_spatial_component(arguments)
+    elif name == "validate_nextflow_config":
+        return await _validate_nextflow_config(arguments)
 
-    elif name == "validate_spatial_data":
-        return await _validate_spatial_data(arguments)
-
-    elif name == "setup_spatial_env":
-        return await _setup_spatial_env(arguments)
+    elif name == "analyze_nextflow_log":
+        return await _analyze_nextflow_log(arguments)
 
     else:
         raise ValueError(f"Unknown tool: {name}")
 
 
-async def _execute_nextflow_workflow(arguments: Dict[str, Any]) -> List[TextContent]:
-    """Execute a Nextflow workflow."""
-    workflow_name = arguments["workflow_name"]
-    github_repo_url = arguments["github_repo_url"]
-    profile = arguments.get("profile", "docker")
-    params = arguments.get("params", {})
-    config_file = arguments.get("config_file")
+async def _check_environment(arguments: Dict[str, Any]) -> List[TextContent]:
+    """Check if required tools and dependencies are installed."""
+    tools = arguments.get("tools", ["nextflow", "viash", "docker", "java"])
 
-    # Build the command
-    cmd = ["nextflow", "run", f"{github_repo_url}/{workflow_name}"]
-
-    if profile:
-        cmd.extend(["-profile", profile])
-
-    if config_file:
-        cmd.extend(["-c", config_file])
-
-    # Add parameters
-    for key, value in params.items():
-        cmd.append(f"--{key}")
-        cmd.append(str(value))
+    environment_status = {
+        "overall_status": "ready",
+        "tools": {},
+        "recommendations": []
+    }
 
     try:
-        # Execute the command
-        logger.info(f"Executing command: {' '.join(cmd)}")
-        result = subprocess.run(
-            cmd,
-            capture_output=True,
-            text=True,
-            timeout=3600  # 1 hour timeout
-        )
+        for tool in tools:
+            tool_status = {"available": False, "version": None, "path": None}
 
-        execution_result = {
-            "command": " ".join(cmd),
-            "exit_code": result.returncode,
-            "stdout": result.stdout,
-            "stderr": result.stderr,
-            "status": "completed" if result.returncode == 0 else "failed"
-        }
+            try:
+                if tool == "nextflow":
+                    result = subprocess.run(["nextflow", "-version"], capture_output=True, text=True, timeout=10)
+                    if result.returncode == 0:
+                        tool_status["available"] = True
+                        tool_status["version"] = result.stdout.strip()
+                        tool_status["path"] = subprocess.run(["which", "nextflow"], capture_output=True, text=True).stdout.strip()
 
-        return [TextContent(
-            type="text",
-            text=json.dumps(execution_result, indent=2)
-        )]
+                elif tool == "viash":
+                    result = subprocess.run(["viash", "--version"], capture_output=True, text=True, timeout=10)
+                    if result.returncode == 0:
+                        tool_status["available"] = True
+                        tool_status["version"] = result.stdout.strip()
+                        tool_status["path"] = subprocess.run(["which", "viash"], capture_output=True, text=True).stdout.strip()
 
-    except subprocess.TimeoutExpired:
-        return [TextContent(
-            type="text",
-            text=json.dumps({
-                "command": " ".join(cmd),
-                "status": "timeout",
-                "error": "Workflow execution timed out after 1 hour"
-            }, indent=2)
-        )]
+                elif tool == "docker":
+                    result = subprocess.run(["docker", "--version"], capture_output=True, text=True, timeout=10)
+                    if result.returncode == 0:
+                        tool_status["available"] = True
+                        tool_status["version"] = result.stdout.strip()
+                        tool_status["path"] = subprocess.run(["which", "docker"], capture_output=True, text=True).stdout.strip()
+
+                elif tool == "java":
+                    result = subprocess.run(["java", "-version"], capture_output=True, text=True, timeout=10)
+                    if result.returncode == 0:
+                        tool_status["available"] = True
+                        tool_status["version"] = result.stderr.strip()  # Java outputs version to stderr
+                        tool_status["path"] = subprocess.run(["which", "java"], capture_output=True, text=True).stdout.strip()
+
+                else:
+                    # Generic tool check
+                    result = subprocess.run([tool, "--version"], capture_output=True, text=True, timeout=10)
+                    if result.returncode == 0:
+                        tool_status["available"] = True
+                        tool_status["version"] = result.stdout.strip()
+                        tool_status["path"] = subprocess.run(["which", tool], capture_output=True, text=True).stdout.strip()
+
+            except (subprocess.TimeoutExpired, FileNotFoundError):
+                tool_status["available"] = False
+
+            environment_status["tools"][tool] = tool_status
+
+            # Add recommendations for missing tools
+            if not tool_status["available"]:
+                environment_status["overall_status"] = "incomplete"
+                if tool == "nextflow":
+                    environment_status["recommendations"].append("Install Nextflow: curl -s https://get.nextflow.io | bash")
+                elif tool == "viash":
+                    environment_status["recommendations"].append("Install Viash: curl -fsSL get.viash.io | bash")
+                elif tool == "docker":
+                    environment_status["recommendations"].append("Install Docker: https://docs.docker.com/get-docker/")
+                elif tool == "java":
+                    environment_status["recommendations"].append("Install Java: sudo apt install openjdk-17-jre-headless")
+
+        return [TextContent(type="text", text=json.dumps(environment_status, indent=2))]
+
     except Exception as e:
         return [TextContent(
             type="text",
             text=json.dumps({
-                "command": " ".join(cmd),
                 "status": "error",
-                "error": str(e)
+                "error": f"Failed to check environment: {str(e)}"
             }, indent=2)
         )]
 
 
-async def _execute_viash_component(arguments: Dict[str, Any]) -> List[TextContent]:
-    """Execute a Viash component."""
-    component_name = arguments["component_name"]
-    component_config_path = arguments["component_config_path"]
-    engine = arguments.get("engine", "docker")
-    args = arguments.get("args", {})
+async def _validate_nextflow_config(arguments: Dict[str, Any]) -> List[TextContent]:
+    """Validate Nextflow configuration and pipeline syntax."""
+    pipeline_path = arguments["pipeline_path"]
+    config_path = arguments.get("config_path")
 
-    # Build the command
-    cmd = ["viash", "run", component_config_path, "-p", engine]
-
-    # Add component arguments
-    if args:
-        cmd.append("--")
-        for key, value in args.items():
-            cmd.append(f"--{key}")
-            cmd.append(str(value))
+    validation_results = {
+        "pipeline_path": pipeline_path,
+        "config_path": config_path,
+        "issues": [],
+        "warnings": [],
+        "status": "valid"
+    }
 
     try:
-        logger.info(f"Executing Viash component: {' '.join(cmd)}")
-        result = subprocess.run(
-            cmd,
-            capture_output=True,
-            text=True,
-            timeout=1800  # 30 minutes timeout
-        )
+        # Check if pipeline file exists
+        pipeline_file = Path(pipeline_path)
+        if not pipeline_file.exists():
+            validation_results["issues"].append(f"Pipeline file not found: {pipeline_path}")
+            validation_results["status"] = "invalid"
+            return [TextContent(type="text", text=json.dumps(validation_results, indent=2))]
 
-        execution_result = {
-            "component": component_name,
-            "command": " ".join(cmd),
-            "exit_code": result.returncode,
-            "stdout": result.stdout,
-            "stderr": result.stderr,
-            "status": "completed" if result.returncode == 0 else "failed"
-        }
+        # Read and check pipeline content
+        with open(pipeline_file, 'r') as f:
+            pipeline_content = f.read()
 
-        return [TextContent(
-            type="text",
-            text=json.dumps(execution_result, indent=2)
-        )]
+        # Basic Nextflow syntax checks
+        if 'nextflow.enable.dsl=2' not in pipeline_content and 'nextflow { dsl = 2 }' not in pipeline_content:
+            validation_results["warnings"].append("DSL2 not explicitly enabled - recommend adding 'nextflow.enable.dsl=2'")
 
-    except subprocess.TimeoutExpired:
-        return [TextContent(
-            type="text",
-            text=json.dumps({
-                "component": component_name,
-                "command": " ".join(cmd),
-                "status": "timeout",
-                "error": "Component execution timed out after 30 minutes"
-            }, indent=2)
-        )]
+        if 'process ' not in pipeline_content and 'workflow ' not in pipeline_content:
+            validation_results["issues"].append("No process or workflow blocks found in pipeline")
+            validation_results["status"] = "invalid"
+
+        # Check for common issues
+        if 'publishDir' in pipeline_content and 'output:' not in pipeline_content:
+            validation_results["warnings"].append("publishDir found but no output block - this may cause issues")
+
+        # Check config file if provided
+        if config_path:
+            config_file = Path(config_path)
+            if not config_file.exists():
+                validation_results["warnings"].append(f"Config file not found: {config_path}")
+            else:
+                with open(config_file, 'r') as f:
+                    config_content = f.read()
+
+                # Basic config validation
+                if 'process ' in config_content:
+                    validation_results["warnings"].append("Config looks good - process configuration found")
+
+        # Try to run nextflow validation if available
+        try:
+            result = subprocess.run(
+                ["nextflow", "config", pipeline_path],
+                capture_output=True, text=True, timeout=30
+            )
+            if result.returncode != 0:
+                validation_results["issues"].append(f"Nextflow config validation failed: {result.stderr}")
+                validation_results["status"] = "invalid"
+        except (subprocess.TimeoutExpired, FileNotFoundError):
+            validation_results["warnings"].append("Nextflow not available - performed basic syntax check only")
+
+        return [TextContent(type="text", text=json.dumps(validation_results, indent=2))]
+
     except Exception as e:
         return [TextContent(
             type="text",
             text=json.dumps({
-                "component": component_name,
-                "command": " ".join(cmd),
                 "status": "error",
-                "error": str(e)
-            }, indent=2)
-        )]
-
-
-async def _build_docker_image(arguments: Dict[str, Any]) -> List[TextContent]:
-    """Build a Docker image."""
-    dockerfile_path = arguments["dockerfile_path"]
-    image_tag = arguments["image_tag"]
-    context_path = arguments.get("context_path", ".")
-
-    cmd = ["docker", "build", "-t", image_tag, "-f", dockerfile_path, context_path]
-
-    try:
-        logger.info(f"Building Docker image: {' '.join(cmd)}")
-        result = subprocess.run(
-            cmd,
-            capture_output=True,
-            text=True,
-            timeout=1800  # 30 minutes timeout
-        )
-
-        build_result = {
-            "image_tag": image_tag,
-            "command": " ".join(cmd),
-            "exit_code": result.returncode,
-            "stdout": result.stdout,
-            "stderr": result.stderr,
-            "status": "completed" if result.returncode == 0 else "failed"
-        }
-
-        return [TextContent(
-            type="text",
-            text=json.dumps(build_result, indent=2)
-        )]
-
-    except subprocess.TimeoutExpired:
-        return [TextContent(
-            type="text",
-            text=json.dumps({
-                "image_tag": image_tag,
-                "command": " ".join(cmd),
-                "status": "timeout",
-                "error": "Docker build timed out after 30 minutes"
-            }, indent=2)
-        )]
-    except Exception as e:
-        return [TextContent(
-            type="text",
-            text=json.dumps({
-                "image_tag": image_tag,
-                "command": " ".join(cmd),
-                "status": "error",
-                "error": str(e)
+                "error": f"Failed to validate Nextflow configuration: {str(e)}"
             }, indent=2)
         )]
 
@@ -800,513 +507,25 @@ async def _analyze_nextflow_log(arguments: Dict[str, Any]) -> List[TextContent]:
         )]
 
 
-async def _read_file(arguments: Dict[str, Any]) -> List[TextContent]:
-    """Read contents of a file for analysis or editing."""
-    file_path = arguments["file_path"]
-
-    try:
-        with open(file_path, 'r') as f:
-            file_content = f.read()
-        return [TextContent(type="text", text=file_content)]
-    except Exception as e:
-        return [TextContent(
-            type="text",
-            text=json.dumps({
-                "status": "error",
-                "error": f"Failed to read file: {str(e)}"
-            }, indent=2)
-        )]
-
-
-async def _write_file(arguments: Dict[str, Any]) -> List[TextContent]:
-    """Write or create a file with specified content."""
-    file_path = arguments["file_path"]
-    content = arguments["content"]
-
-    try:
-        with open(file_path, 'w') as f:
-            f.write(content)
-        return [TextContent(type="text", text="File written successfully")]
-    except Exception as e:
-        return [TextContent(
-            type="text",
-            text=json.dumps({
-                "status": "error",
-                "error": f"Failed to write file: {str(e)}"
-            }, indent=2)
-        )]
-
-
-async def _list_directory(arguments: Dict[str, Any]) -> List[TextContent]:
-    """List contents of a directory."""
-    directory_path = arguments["directory_path"]
-    include_hidden = arguments.get("include_hidden", False)
-
-    try:
-        entries = []
-        for entry in Path(directory_path).iterdir():
-            if include_hidden or not entry.name.startswith('.'):
-                entries.append({
-                    "name": entry.name,
-                    "is_directory": entry.is_dir(),
-                    "size": entry.stat().st_size
-                })
-        return [TextContent(
-            type="text",
-            text=json.dumps(entries, indent=2)
-        )]
-    except Exception as e:
-        return [TextContent(
-            type="text",
-            text=json.dumps({
-                "status": "error",
-                "error": f"Failed to list directory: {str(e)}"
-            }, indent=2)
-        )]
-
-
-async def _validate_nextflow_config(arguments: Dict[str, Any]) -> List[TextContent]:
-    """Validate Nextflow configuration and pipeline syntax."""
-    pipeline_path = arguments["pipeline_path"]
-    config_path = arguments.get("config_path")
-
-    validation_results = {
-        "pipeline_path": pipeline_path,
-        "config_path": config_path,
-        "issues": [],
-        "warnings": [],
-        "status": "valid"
-    }
-
-    try:
-        # Check if pipeline file exists
-        pipeline_file = Path(pipeline_path)
-        if not pipeline_file.exists():
-            validation_results["issues"].append(f"Pipeline file not found: {pipeline_path}")
-            validation_results["status"] = "invalid"
-            return [TextContent(type="text", text=json.dumps(validation_results, indent=2))]
-
-        # Read and check pipeline content
-        with open(pipeline_file, 'r') as f:
-            pipeline_content = f.read()
-
-        # Basic Nextflow syntax checks
-        if 'nextflow.enable.dsl=2' not in pipeline_content and 'nextflow { dsl = 2 }' not in pipeline_content:
-            validation_results["warnings"].append("DSL2 not explicitly enabled - recommend adding 'nextflow.enable.dsl=2'")
-
-        if 'process ' not in pipeline_content and 'workflow ' not in pipeline_content:
-            validation_results["issues"].append("No process or workflow blocks found in pipeline")
-            validation_results["status"] = "invalid"
-
-        # Check for common issues
-        if 'publishDir' in pipeline_content and 'output:' not in pipeline_content:
-            validation_results["warnings"].append("publishDir found but no output block - this may cause issues")
-
-        # Check config file if provided
-        if config_path:
-            config_file = Path(config_path)
-            if not config_file.exists():
-                validation_results["warnings"].append(f"Config file not found: {config_path}")
-            else:
-                with open(config_file, 'r') as f:
-                    config_content = f.read()
-
-                # Basic config validation
-                if 'process ' in config_content:
-                    validation_results["warnings"].append("Config looks good - process configuration found")
-
-        # Try to run nextflow validation if available
-        try:
-            result = subprocess.run(
-                ["nextflow", "config", pipeline_path],
-                capture_output=True, text=True, timeout=30
-            )
-            if result.returncode != 0:
-                validation_results["issues"].append(f"Nextflow config validation failed: {result.stderr}")
-                validation_results["status"] = "invalid"
-        except (subprocess.TimeoutExpired, FileNotFoundError):
-            validation_results["warnings"].append("Nextflow not available - performed basic syntax check only")
-
-        return [TextContent(type="text", text=json.dumps(validation_results, indent=2))]
-
-    except Exception as e:
-        return [TextContent(
-            type="text",
-            text=json.dumps({
-                "status": "error",
-                "error": f"Failed to validate Nextflow configuration: {str(e)}"
-            }, indent=2)
-        )]
-
-
-async def _check_environment(arguments: Dict[str, Any]) -> List[TextContent]:
-    """Check if required tools and dependencies are installed."""
-    tools = arguments.get("tools", ["nextflow", "viash", "docker", "java"])
-
-    environment_status = {
-        "overall_status": "ready",
-        "tools": {},
-        "recommendations": []
-    }
-
-    try:
-        for tool in tools:
-            tool_status = {"available": False, "version": None, "path": None}
-
-            try:
-                if tool == "nextflow":
-                    result = subprocess.run(["nextflow", "-version"], capture_output=True, text=True, timeout=10)
-                    if result.returncode == 0:
-                        tool_status["available"] = True
-                        tool_status["version"] = result.stdout.strip()
-                        tool_status["path"] = subprocess.run(["which", "nextflow"], capture_output=True, text=True).stdout.strip()
-
-                elif tool == "viash":
-                    result = subprocess.run(["viash", "--version"], capture_output=True, text=True, timeout=10)
-                    if result.returncode == 0:
-                        tool_status["available"] = True
-                        tool_status["version"] = result.stdout.strip()
-                        tool_status["path"] = subprocess.run(["which", "viash"], capture_output=True, text=True).stdout.strip()
-
-                elif tool == "docker":
-                    result = subprocess.run(["docker", "--version"], capture_output=True, text=True, timeout=10)
-                    if result.returncode == 0:
-                        tool_status["available"] = True
-                        tool_status["version"] = result.stdout.strip()
-                        tool_status["path"] = subprocess.run(["which", "docker"], capture_output=True, text=True).stdout.strip()
-
-                elif tool == "java":
-                    result = subprocess.run(["java", "-version"], capture_output=True, text=True, timeout=10)
-                    if result.returncode == 0:
-                        tool_status["available"] = True
-                        tool_status["version"] = result.stderr.strip()  # Java outputs version to stderr
-                        tool_status["path"] = subprocess.run(["which", "java"], capture_output=True, text=True).stdout.strip()
-
-                else:
-                    # Generic tool check
-                    result = subprocess.run([tool, "--version"], capture_output=True, text=True, timeout=10)
-                    if result.returncode == 0:
-                        tool_status["available"] = True
-                        tool_status["version"] = result.stdout.strip()
-                        tool_status["path"] = subprocess.run(["which", tool], capture_output=True, text=True).stdout.strip()
-
-            except (subprocess.TimeoutExpired, FileNotFoundError):
-                tool_status["available"] = False
-
-            environment_status["tools"][tool] = tool_status
-
-            # Add recommendations for missing tools
-            if not tool_status["available"]:
-                environment_status["overall_status"] = "incomplete"
-                if tool == "nextflow":
-                    environment_status["recommendations"].append("Install Nextflow: curl -s https://get.nextflow.io | bash")
-                elif tool == "viash":
-                    environment_status["recommendations"].append("Install Viash: curl -fsSL get.viash.io | bash")
-                elif tool == "docker":
-                    environment_status["recommendations"].append("Install Docker: https://docs.docker.com/get-docker/")
-                elif tool == "java":
-                    environment_status["recommendations"].append("Install Java: sudo apt install openjdk-17-jre-headless")
-
-        return [TextContent(type="text", text=json.dumps(environment_status, indent=2))]
-
-    except Exception as e:
-        return [TextContent(
-            type="text",
-            text=json.dumps({
-                "status": "error",
-                "error": f"Failed to check environment: {str(e)}"
-            }, indent=2)
-        )]
-
-
-async def _create_spatial_component(arguments: Dict[str, Any]) -> List[TextContent]:
-    """Create a complete viash component structure for spatial transcriptomics"""
-
-    name = arguments.get("name", "new_method")
-    method_type = arguments.get("method_type", "segmentation")
-    output_dir = arguments.get("output_dir", ".")
-
-    try:
-        import os
-
-        # Create component directory
-        component_dir = os.path.join(output_dir, f"src/methods_{method_type}", name)
-        os.makedirs(component_dir, exist_ok=True)
-
-        # Generate templates
-        config_template = f"""functionality:
-  name: {name}
-  description: "{name} method for {method_type}"
-
-  arguments:
-    - name: "--input"
-      type: file
-      required: true
-      description: Input spatial data file (zarr format)
-    - name: "--output"
-      type: file
-      required: true
-      description: Output file path
-    - name: "--method_param"
-      type: double
-      default: 1.0
-      description: Method-specific parameter
-
-  resources:
-    - type: python_script
-      path: script.py
-
-platforms:
-  - type: docker
-    image: python:3.9
-    setup:
-      - type: python
-        packages:
-          - spatialdata
-          - scanpy
-          - anndata
-          - numpy
-          - pandas
-  - type: native
-
-__merge__: /src/api/comp_method_{method_type}.yaml
-"""
-
-        script_template = f"""#!/usr/bin/env python3
-
-import spatialdata as sd
-import scanpy as sc
-import numpy as np
-import sys
-
-## VIASH START
-par = {{
-    'input': 'resources_test/common/2023_10x_mouse_brain_xenium/dataset.zarr',
-    'output': 'tmp/output.zarr',
-    'method_param': 1.0
-}}
-## VIASH END
-
-def main():
-    # Load spatial data
-    sdata = sd.read_zarr(par['input'])
-
-    # TODO: Implement your {name} method here
-    # Example structure:
-    # 1. Extract required data from sdata
-    # 2. Apply preprocessing if needed
-    # 3. Run your method
-    # 4. Format output as SpatialData object
-
-    # Placeholder implementation
-    processed_sdata = sdata.copy()
-
-    # Save output
-    processed_sdata.write(par['output'])
-    print(f"{name} method completed successfully")
-
-if __name__ == "__main__":
-    main()
-"""
-
-        readme_template = f"# {name}\n\n{method_type.title()} method implementation using {name}.\n\n## Usage\n\nThis component processes spatial transcriptomics data using the {name} method."
-
-        templates = {
-            "config.vsh.yaml": config_template,
-            "script.py": script_template,
-            "readme.md": readme_template
-        }
-
-        # Write files
-        files_created = []
-        for filename, content in templates.items():
-            file_path = os.path.join(component_dir, filename)
-            with open(file_path, 'w') as f:
-                f.write(content)
-            files_created.append(file_path)
-
-        result = f"Created spatial transcriptomics component '{name}' with files: {', '.join(files_created)}"
-        return [TextContent(type="text", text=result)]
-
-    except Exception as e:
-        error_msg = f"Error creating component: {str(e)}"
-        return [TextContent(type="text", text=error_msg)]
-
-
-async def _validate_spatial_data(arguments: Dict[str, Any]) -> List[TextContent]:
-    """Validate spatial data file structure and requirements"""
-
-    file_path = arguments.get("file_path", "")
-
-    try:
-        validation_script = f'''
-import spatialdata as sd
-import sys
-import os
-
-def validate_spatial_data(file_path):
-    try:
-        # Check file exists
-        if not os.path.exists(file_path):
-            return f"Error: File {{file_path}} does not exist"
-
-        # Load spatial data
-        sdata = sd.read_zarr(file_path)
-
-        validation_results = []
-        validation_results.append(f"Successfully loaded SpatialData object from {{file_path}}")
-
-        # Check components
-        if hasattr(sdata, 'images') and sdata.images:
-            validation_results.append(f"Images: {{list(sdata.images.keys())}}")
-
-        if hasattr(sdata, 'points') and sdata.points:
-            validation_results.append(f"Points: {{list(sdata.points.keys())}}")
-
-        if hasattr(sdata, 'labels') and sdata.labels:
-            validation_results.append(f"Labels: {{list(sdata.labels.keys())}}")
-
-        if hasattr(sdata, 'tables') and sdata.tables:
-            validation_results.append(f"Tables: {{list(sdata.tables.keys())}}")
-
-        # Check coordinate systems
-        if hasattr(sdata, 'coordinate_systems'):
-            validation_results.append(f"Coordinate systems: {{list(sdata.coordinate_systems)}}")
-
-        return "\\n".join(validation_results)
-
-    except Exception as e:
-        return f"Validation failed: {{str(e)}}"
-
-if __name__ == "__main__":
-    result = validate_spatial_data("{file_path}")
-    print(result)
-'''
-
-        result = await _run_python_script(validation_script)
-        return [TextContent(type="text", text=result)]
-
-    except Exception as e:
-        error_msg = f"Error validating spatial data: {str(e)}"
-        return [TextContent(type="text", text=error_msg)]
-
-
-async def _setup_spatial_env(arguments: Dict[str, Any]) -> List[TextContent]:
-    """Generate conda environment specification for spatial transcriptomics"""
-
-    env_name = arguments.get("env_name", "spatial_transcriptomics")
-
-    conda_env = f"""name: {env_name}
-channels:
-  - conda-forge
-  - bioconda
-  - defaults
-dependencies:
-  - python=3.9
-  - pip
-  - jupyter
-  - numpy
-  - pandas
-  - matplotlib
-  - seaborn
-  - scikit-learn
-  - pip:
-    - spatialdata
-    - scanpy
-    - anndata
-    - zarr
-    - dask
-    - xarray
-    - geopandas
-    - shapely
-    - rasterio
-    - napari[all]
-    - spatialdata-plot
-    - squidpy
-"""
-
-    try:
-        with open(f"{env_name}.yml", 'w') as f:
-            f.write(conda_env)
-
-        result = f"""Created conda environment file: {env_name}.yml
-
-To use this environment:
-1. conda env create -f {env_name}.yml
-2. conda activate {env_name}
-
-This environment includes all packages mentioned in the onboarding guide:
-- spatialdata: Core spatial data handling
-- scanpy: Single-cell analysis
-- anndata: Annotated data matrices
-- Additional visualization and analysis tools
-"""
-        return [TextContent(type="text", text=result)]
-    except Exception as e:
-        error_msg = f"Error creating environment file: {str(e)}"
-        return [TextContent(type="text", text=error_msg)]
-
-
-async def _run_python_script(script_code: str) -> str:
-    """Execute Python script code and return the output"""
-    try:
-        import tempfile
-        import os
-
-        # Create a temporary Python file
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.py', delete=False) as temp_file:
-            temp_file.write(script_code)
-            temp_file_path = temp_file.name
-
-        try:
-            # Execute the script
-            result = subprocess.run(
-                ["python", temp_file_path],
-                capture_output=True,
-                text=True,
-                timeout=60  # 1 minute timeout
-            )
-
-            output = result.stdout
-            if result.stderr:
-                output += f"\nSTDERR: {result.stderr}"
-
-            return output
-
-        finally:
-            # Clean up temporary file
-            if os.path.exists(temp_file_path):
-                os.unlink(temp_file_path)
-
-    except Exception as e:
-        return f"Error executing Python script: {str(e)}"
-
-
-async def main(transport: str = "stdio", host: str = "0.0.0.0", port: int = 8080):
+async def main():
     """Main entry point for the MCP server."""
     logger.info(f"Starting {SERVER_NAME} v{SERVER_VERSION}")
 
-    if transport == "stdio":
-        async with mcp.server.stdio.stdio_server() as (read_stream, write_stream):
-            await server.run(
-                read_stream,
-                write_stream,
-                InitializationOptions(
-                    server_name=SERVER_NAME,
-                    server_version=SERVER_VERSION,
-                    capabilities={
-                        "resources": {},
-                        "tools": {},
-                        "prompts": {},
-                        "logging": {}
-                    },
-                ),
-            )
-    elif transport == "http":
-        http_server = HttpServer(server, SERVER_NAME, SERVER_VERSION)
-        await http_server.start(host=host, port=port)
-    else:
-        raise ValueError(f"Unknown transport: {transport}")
+    async with mcp.server.stdio.stdio_server() as (read_stream, write_stream):
+        await server.run(
+            read_stream,
+            write_stream,
+            InitializationOptions(
+                server_name=SERVER_NAME,
+                server_version=SERVER_VERSION,
+                capabilities={
+                    "resources": {},
+                    "tools": {},
+                    "prompts": {},
+                    "logging": {}
+                },
+            ),
+        )
 
 
 if __name__ == "__main__":

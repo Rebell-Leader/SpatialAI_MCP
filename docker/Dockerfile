@@ -16,7 +16,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     openjdk-17-jre-headless \
     && rm -rf /var/lib/apt/lists/*
 
-# Install Docker CLI (for building images)
+# Install Docker CLI (for building images within the container if needed)
 RUN curl -fsSL https://download.docker.com/linux/debian/gpg | gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg \
     && echo "deb [arch=amd64 signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/debian bullseye stable" > /etc/apt/sources.list.d/docker.list \
     && apt-get update && apt-get install -y --no-install-recommends docker-ce-cli \
@@ -40,14 +40,15 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy the application
+# Copy the application source
 COPY src/ ./src/
 COPY pyproject.toml ./
+COPY app.py ./
 
-# Install the package
+# Install the project in editable mode
 RUN pip install -e .
 
-# Create necessary directories
+# Create necessary directories and set permissions
 RUN mkdir -p /app/logs /app/data /app/work \
     && chown -R openproblems:openproblems /app
 
@@ -57,12 +58,12 @@ USER openproblems
 # Set environment variables for the user
 ENV PATH="/home/openproblems/.local/bin:$PATH"
 
-# Expose the default MCP port (not required for stdio but useful for HTTP transport)
-EXPOSE 8000
+# Expose the Gradio port
+EXPOSE 7860
 
 # Health check
-HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
-    CMD python -c "import mcp; print('MCP SDK available')" || exit 1
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+    CMD curl --fail http://localhost:7860 || exit 1
 
-# Default command
-CMD ["python", "-m", "mcp_server.main"]
+# Default command to run the Gradio application
+CMD ["python", "app.py", "--server-port", "7860"]

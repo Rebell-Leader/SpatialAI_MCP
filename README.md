@@ -1,83 +1,100 @@
-# SpatialAI_MCP
-Empowering spatial transcriptomics research by providing AI agents with a standardized interface to Nextflow pipelines, Viash components, and comprehensive documentation, accelerating discovery in the OpenProblems project.
-
 # OpenProblems Spatial Transcriptomics MCP Server
 
-**Empowering spatial transcriptomics research by providing AI agents with standardized access to Nextflow pipelines, Viash components, and bioinformatics workflows through the Model Context Protocol.**
+This project provides a Model Context Protocol (MCP) server designed to streamline AI agent interaction with critical bioinformatics tools for spatial transcriptomics workflows within the OpenProblems ecosystem.
 
-[![Python](https://img.shields.io/badge/python-3.8+-blue.svg)](https://python.org)
-[![MCP](https://img.shields.io/badge/protocol-MCP-green.svg)](https://modelcontextprotocol.io)
-[![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+## 🚀 How to Run the Demo
 
-## 🚀 **What This Project Delivers**
+There are two primary ways to run the application: locally using Python or with Docker.
 
-The OpenProblems Spatial Transcriptomics MCP Server is a **production-ready** Model Context Protocol server that enables AI agents (like Continue.dev) to automate complex bioinformatics workflows. Instead of manually managing Nextflow pipelines, Viash components, and Docker containers, AI agents can now execute these tasks through a standardized interface.
+### 1. Local Execution
 
-### **Key Capabilities**
+This is the recommended method for development and testing.
 
-- **🤖 AI Agent Integration**: Works seamlessly with Continue.dev and other MCP-compatible AI tools
-- **⚡ 14 Specialized Tools**: From environment validation to pipeline execution and log analysis
-- **📚 5 Knowledge Resources**: Curated documentation and workflow templates
-- **🐳 Container-Ready**: Full Docker support with multi-stage builds
-- **🧪 Testing Framework**: Comprehensive test suite with 100% success rate
-- **📋 CLI Interface**: Direct command-line access for development and debugging
+**Prerequisites:**
+- Python 3.9+
+- All dependencies from `requirements.txt`
+- Nextflow, Viash, and Docker installed and available in your system's PATH.
 
-## 🛠️ **Available MCP Tools**
+**Instructions:**
 
-Our server provides 14 specialized tools for spatial transcriptomics workflows:
+1.  **Clone the repository:**
+    ```bash
+    git clone https://github.com/openproblems-bio/SpatialAI_MCP.git
+    cd SpatialAI_MCP
+    ```
 
-### **Environment & Validation**
-- `check_environment` - Validate computational environment (Docker, Nextflow, Viash, Java)
-- `validate_nextflow_config` - Check pipeline syntax and configuration
+2.  **Install dependencies:**
+    ```bash
+    pip install -e .
+    ```
 
-### **File & Project Management**
-- `read_file` - Access and analyze project files
-- `write_file` - Create optimized scripts and configurations
-- `list_directory` - Explore project structure and data organization
+3.  **Launch the Gradio application:**
+    ```bash
+    python app.py
+    ```
 
-### **Workflow Execution**
-- `run_nextflow_workflow` - Execute Nextflow pipelines from OpenProblems repositories
-- `run_viash_component` - Run modular Viash components with Docker/native engines
-- `build_docker_image` - Build containerized analysis environments
+4.  **Access the interface** by navigating to `http://localhost:7860` in your web browser.
 
-### **Analysis & Debugging**
-- `analyze_nextflow_log` - AI-powered troubleshooting and error analysis
-- `list_available_tools` - Dynamic tool discovery and capabilities
-- `echo_test` - Verify MCP server connectivity
+### 2. Docker Deployment
 
-### **Spatial Transcriptomics Specific**
-- `create_spatial_component` - Create a viash component template for spatial transcriptomics methods
-- `validate_spatial_data` - Validate spatial transcriptomics data format and structure
-- `setup_spatial_env` - Generate conda environment file for spatial transcriptomics work
+This method is ideal for a stable, containerized deployment.
 
-## 📚 **Knowledge Resources**
+**Prerequisites:**
+- Docker and Docker Compose
 
-Access curated, machine-readable documentation:
+**Instructions:**
 
-- **Server Status** (`server://status`) - Real-time capabilities and configuration
-- **Nextflow Documentation** (`documentation://nextflow`) - DSL2 best practices and patterns
-- **Viash Documentation** (`documentation://viash`) - Component development guidelines
-- **Docker Documentation** (`documentation://docker`) - Optimization and best practices
-- **Spatial Workflow Templates** (`templates://spatial-workflows`) - Ready-to-use pipeline templates
+1.  **Clone the repository** (if you haven't already).
 
-## 🏃‍♂️ **Quick Start**
+2.  **(Optional) Configure API Keys:** Create a `.env` file in the project root to manage your API keys securely:
+    ```
+    OPENAI_API_KEY=your_openai_key_here
+    MIXEDBREAD_API_KEY=your_mixedbread_key_here
+    ```
 
-### **Installation**
+3.  **Build and run with Docker Compose:**
+    ```bash
+    docker-compose -f docker/docker-compose.yml up --build
+    ```
 
-```bash
-# Clone and install
-git clone https://github.com/openproblems-bio/SpatialAI_MCP.git
-cd SpatialAI_MCP
-pip install -e .
+4.  **Access the interface** by navigating to `http://localhost:7860` in your web browser.
 
-# Verify installation
-openproblems-mcp info
-openproblems-mcp tool check_environment
+## Architecture
+
+The following diagram illustrates the complete system architecture:
+
+```mermaid
+graph TD
+    subgraph "Clients"
+        A[Gradio Demo UI] --> C
+        B[Continue.dev Agent] --> C
+    end
+
+    subgraph "MCP Server (app.py)"
+        C(Gradio MCP Server) -- MCP Tools --> D[Tool Execution Logic]
+        D -- Calls --> E[Environment Tools]
+        D -- Calls --> F[AI/Search Tools]
+    end
+
+    subgraph "Backend Services & Tools"
+        F -- Interacts with --> G[LLM API]
+        F -- Interacts with --> H[Embedding Model]
+        F -- Interacts with --> I[QDrant DB]
+        F -- Interacts with --> J[Doc Crawlers]
+    end
+
+    style A fill:#f9f,stroke:#333,stroke-width:2px
+    style B fill:#f9f,stroke:#333,stroke-width:2px
+    style C fill:#bbf,stroke:#333,stroke-width:2px
+    style G fill:#ccf,stroke:#333,stroke-width:2px
+    style H fill:#ccf,stroke:#333,stroke-width:2px
+    style I fill:#ccf,stroke:#333,stroke-width:2px
+    style J fill:#ccf,stroke:#333,stroke-width:2px
 ```
 
-### **Continue.dev Integration**
+## 🤖 AI Agent Integration (Continue.dev)
 
-Add to your `~/.continue/config.json`:
+To connect this MCP server with the Continue.dev IDE extension, ensure the server is running (either locally or via Docker) and add the following to your `~/.continue/config.json`:
 
 ```json
 {
@@ -88,7 +105,7 @@ Add to your `~/.continue/config.json`:
         "transport": {
           "type": "stdio",
           "command": "python",
-          "args": ["-m", "mcp_server.main"],
+          "args": ["-m", "src.mcp_server.main"],
           "cwd": "/path/to/your/SpatialAI_MCP"
         }
       }
@@ -96,164 +113,4 @@ Add to your `~/.continue/config.json`:
   }
 }
 ```
-
-### **Test the Integration**
-
-Ask your AI agent: *"Check my spatial transcriptomics environment and help me create a quality control pipeline"*
-
-The agent will automatically:
-- ✅ Use `check_environment` to validate your setup
-- ✅ Use `list_directory` to analyze your project structure
-- ✅ Access documentation resources for best practices
-- ✅ Generate optimized Nextflow/Viash workflows
-- ✅ Validate configurations before delivery
-
-### **Docker Deployment**
-
-```bash
-# Quick Docker setup
-cd docker
-docker-compose up -d
-
-# Check status
-docker-compose logs mcp-server
-```
-
-## 🧬 **Real-World Example: AI-Assisted Workflow Creation**
-
-**User Request**: *"Help me set up spatial transcriptomics quality control"*
-
-**AI Agent Response**:
-```
-I'll help you create a comprehensive spatial QC pipeline. Let me first assess your environment.
-
-[Uses check_environment tool]
-✅ Docker: Available (version 28.1.1)
-❌ Nextflow: Not found
-❌ Viash: Not found
-
-[Uses list_directory tool]
-Found spatial data in: data/spatial_samples/
-Existing configs: config/
-
-Based on OpenProblems best practices, I'll:
-1. Install missing dependencies
-2. Create a modular QC pipeline
-3. Generate Viash components
-4. Set up comprehensive testing
-
-[Uses write_file tool to create optimized pipeline]
-Created: spatial_qc_pipeline.nf
-Created: components/quality_control/config.vsh.yaml
-Created: tests/test_qc_pipeline.py
-
-[Uses validate_nextflow_config tool]
-✅ Pipeline syntax validated
-✅ Resource requirements optimized
-✅ Error handling implemented
-```
-
-## 🎯 **Target Use Cases**
-
-### **For Computational Biologists**
-- **Automated Pipeline Generation**: AI agents create Nextflow workflows following OpenProblems standards
-- **Environment Validation**: Ensure all dependencies are properly configured
-- **Intelligent Debugging**: AI-powered analysis of failed pipeline runs
-- **Best Practices Enforcement**: Automatic adherence to community guidelines
-
-### **For AI Agents**
-- **Structured Tool Access**: 11 specialized bioinformatics functions
-- **Rich Context**: Comprehensive documentation as machine-readable resources
-- **Error Recovery**: Intelligent troubleshooting capabilities
-- **Workflow Automation**: Complete pipeline execution and validation
-
-### **For OpenProblems Contributors**
-- **Accelerated Development**: AI-assisted component and workflow creation
-- **Quality Assurance**: Automated testing and validation
-- **Documentation Access**: Real-time access to framework guidelines
-- **Community Standards**: Enforced best practices and conventions
-
-## 🧪 **Testing & Quality**
-
-```bash
-# Run comprehensive test suite
-pytest tests/ -v
-
-# Test individual tools
-openproblems-mcp tool echo_test message="Hello World"
-openproblems-mcp tool check_environment
-
-# Validate MCP server
-openproblems-mcp doctor --check-tools
-```
-
-**Current Test Status**: 13/13 tests passing (100% success rate)
-- ✅ Core MCP functionality working
-- ✅ Tool execution validated
-- ✅ Basic integrations functional
-- ✅ Documentation resources are now cached correctly
-
-## 🛠️ **Technology Stack**
-
-- **[Model Context Protocol (MCP)](https://modelcontextprotocol.io/)** - AI-tool communication standard
-- **[Nextflow](https://nextflow.io/)** - Workflow orchestration and pipeline management
-- **[Viash](https://viash.io/)** - Component modularization and standardization
-- **[Docker](https://docker.com/)** - Containerization and reproducible environments
-- **Python 3.8+** - Core implementation with async/await
-- **[Continue.dev](https://continue.dev/)** - AI coding assistant integration
-
-## 📈 **Current Capabilities & Limitations**
-
-### **What Works Today** ✅
-- Full MCP protocol compliance with tools and resources
-- Nextflow pipeline execution with proper resource management
-- Viash component building and execution
-- Docker image creation and management
-- Continue.dev integration with sophisticated AI agent prompts
-- CLI interface for direct tool access
-- Environment validation and troubleshooting
-
-### **Known Limitations** 🔧
-- GPU support planned but not implemented
-- Advanced log analysis patterns being refined
-
-
-### **Immediate Roadmap** 🚀
-1. **Enhance log analysis patterns** for better troubleshooting
-2. **Expand workflow template library** with more spatial analysis patterns
-
-## 🤝 **Contributing**
-
-We welcome contributions from the bioinformatics and AI communities:
-
-1. **Check our [GitHub Issues](https://github.com/openproblems-bio/SpatialAI_MCP/issues)** for current tasks
-2. **Review [CONTRIBUTING.md](CONTRIBUTING.md)** for development guidelines
-3. **Test the Continue.dev integration** and report your experience
-4. **Contribute workflow templates** for spatial transcriptomics analysis
-
-## 🔗 **Related Projects & Resources**
-
-### **OpenProblems Ecosystem**
-- **[OpenProblems](https://github.com/openproblems-bio/openproblems)** - Community benchmarking platform
-- **[Spatial Decomposition Task](https://github.com/openproblems-bio/task_spatial_decomposition)** - Spatial analysis benchmarks
-- **[IST Preprocessing](https://github.com/openproblems-bio/task_ist_preprocessing)** - Data preprocessing workflows
-
-### **Framework Documentation**
-- **[Nextflow Documentation](https://nextflow.io/docs/latest/)** - Pipeline development guide
-- **[Viash Documentation](https://viash.io/docs/)** - Component creation guide
-- **[Continue.dev Setup](docs/CONTINUE_DEV_SETUP.md)** - AI agent integration guide
-
----
-
-## 📊 **Project Status: Production Ready**
-
-**✅ Ready for Use**: The MCP server is fully functional and ready for integration with AI agents and the OpenProblems ecosystem.
-
-**🎯 Next Steps**:
-1. Deploy the server in your environment
-2. Configure Continue.dev integration
-3. Start automating your spatial transcriptomics workflows with AI assistance
-
-**💬 Questions?** Open an issue or reach out through the OpenProblems community channels.
-
-*Transforming spatial transcriptomics research through AI-powered workflow automation.* 🧬✨
+*Replace `/path/to/your/SpatialAI_MCP` with the absolute path to this repository.*
