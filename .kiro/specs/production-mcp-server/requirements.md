@@ -20,17 +20,17 @@ The production system must operate as invisible local infrastructure, running in
 4. WHEN the agent calls `execute_viash_component` tool THEN the system SHALL run Viash components in the user's environment with specified parameters and return outputs and execution logs
 5. WHEN any tool execution exceeds timeout limits THEN the system SHALL gracefully terminate and provide structured error information for the agent to interpret
 
-### Requirement 2: Direct File System Operations
+### Requirement 2: Bioinformatics File Format Support (Continue.dev handles basic file ops)
 
-**User Story:** As a developer using Continue.dev, I want the agent to interact directly with my project files and directories in my local workspace, so that I can work with real codebases and data without any file system barriers or path translation.
+**User Story:** As a spatial transcriptomics researcher using Continue.dev, I want specialized file format support for bioinformatics data, so that the agent can understand and work with spatial biology datasets and workflow files beyond basic text operations.
 
 #### Acceptance Criteria
 
-1. WHEN the agent calls file system tools THEN the system SHALL operate directly on the user's project directories and files with native path resolution
-2. WHEN file operations are requested THEN the system SHALL respect local file permissions and provide detailed error information with local context
-3. WHEN working with large spatial transcriptomics datasets THEN the system SHALL handle file operations efficiently using streaming and direct file access
-4. WHEN directory operations are needed THEN the system SHALL provide recursive traversal with filtering and pattern matching capabilities on the user's local file system
-5. WHEN file operations fail THEN the system SHALL provide structured error responses with specific remediation suggestions relevant to the user's local environment
+1. WHEN the agent calls spatial data validation tools THEN the system SHALL analyze SpatialData, zarr, and AnnData formats for integrity and compatibility
+2. WHEN working with large spatial transcriptomics datasets THEN the system SHALL provide memory-efficient streaming and processing capabilities
+3. WHEN bioinformatics file operations are requested THEN the system SHALL provide domain-specific metadata extraction and format conversion
+4. WHEN workflow files are analyzed THEN the system SHALL parse Nextflow, Viash, and OpenProblems configuration files with domain expertise
+5. WHEN file format issues occur THEN the system SHALL provide bioinformatics-specific error analysis and remediation suggestions
 
 ### Requirement 3: OpenProblems Ecosystem Integration
 
@@ -38,7 +38,7 @@ The production system must operate as invisible local infrastructure, running in
 
 #### Acceptance Criteria
 
-1. WHEN the agent calls `clone_openproblems_repo` tool THEN the system SHALL clone the specified repository and return repository information and structure
+1. WHEN the agent calls `analyze_openproblems_repo` tool THEN the system SHALL analyze repository structure and return OpenProblems-specific configuration and compatibility information
 2. WHEN the agent calls `build_openproblems_method` tool THEN the system SHALL build methods using the OpenProblems framework and return build results
 3. WHEN the agent calls `run_openproblems_benchmark` tool THEN the system SHALL execute benchmarks and return structured results and metrics
 4. WHEN the agent calls `validate_openproblems_submission` tool THEN the system SHALL validate submissions against OpenProblems standards and return validation results

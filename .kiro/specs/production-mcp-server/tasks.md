@@ -13,24 +13,18 @@
   - Create pip-installable package with entry point and CLI command
   - _Requirements: 4.1, 4.2, 4.3, 10.1, 10.4_
 
-- [ ] 2. Implement direct file system operations
-  - [] 2.1 Create local file system handler with native path resolution
-    - Write FileSystemHandler class with direct local file access
-    - Implement native file permission checking and validation
-    - Add support for user's project directory operations
-    - _Requirements: 2.1, 2.2_
+- [ ] 2. Implement spatial transcriptomics data validation (Continue.dev handles basic file ops)
+  - [ ] 2.1 Create spatial data format validation
+    - Write SpatialDataValidator for SpatialData, zarr, and AnnData format validation
+    - Implement integrity checking specific to spatial transcriptomics datasets
+    - Add domain-specific validation for spatial biology data structures
+    - _Requirements: 5.2, 5.4_
 
-  - [ ] 2.2 Add efficient file operations for large datasets
-    - Implement streaming file operations for large spatial transcriptomics data
-    - Add directory traversal with filtering and pattern matching
-    - Create file metadata extraction and caching
-    - _Requirements: 2.3, 2.4_
-
-  - [ ] 2.3 Implement comprehensive error handling for file operations
-    - Add structured error responses with local context and remediation suggestions
-    - Implement retry logic for transient file system errors
-    - Create detailed logging for file operation failures
-    - _Requirements: 2.5, 6.1_
+  - [ ] 2.2 Add bioinformatics metadata extraction and analysis
+    - Implement metadata extraction for spatial transcriptomics data formats
+    - Add workflow configuration analysis for Nextflow and Viash files
+    - Create data quality assessment for spatial biology datasets
+    - _Requirements: 5.2, 5.4_
 
 - [ ] 3. Build local bioinformatics tool execution engine
   - [ ] 3.1 Create local process execution framework
@@ -77,10 +71,10 @@
     - _Requirements: 7.5, 8.1_
 
 - [ ] 5. Build OpenProblems ecosystem integration
-  - [ ] 5.1 Implement local repository cloning and management
-    - Write GitHandler for local repository operations
-    - Add support for OpenProblems repository structure detection
-    - Implement branch and tag handling for reproducible builds
+  - [ ] 5.1 Implement OpenProblems repository analysis (Continue.dev handles git ops)
+    - Write OpenProblemsAnalyzer for repository structure detection
+    - Add support for OpenProblems-specific configuration parsing
+    - Implement method compatibility checking with OpenProblems standards
     - _Requirements: 3.1, 3.5_
 
   - [ ] 5.2 Create OpenProblems method building and validation
@@ -165,11 +159,11 @@
     - Implement proper error handling and status reporting
     - _Requirements: 1.1, 1.2, 1.3, 1.4, 1.5_
 
-  - [ ] 9.2 Create file system MCP tools
-    - Implement read_file, write_file, list_directory MCP tools
-    - Add create_directory, delete_path, get_file_info tools
-    - Create stream_large_file tool for efficient large file handling
-    - _Requirements: 2.1, 2.2, 2.3, 2.4, 2.5_
+  - [ ] 9.2 Create bioinformatics-specific MCP tools (Continue.dev handles basic file ops)
+    - Implement validate_spatial_data, analyze_spatial_metadata MCP tools
+    - Add check_workflow_dependencies, validate_method_structure tools
+    - Create setup_spatial_environment tool for conda/pip environment generation
+    - _Requirements: 5.2, 5.3, 5.4, 5.5_
 
   - [ ] 9.3 Build workflow execution MCP tools
     - Implement run_nextflow_workflow, build_viash_component MCP tools
