@@ -47,7 +47,7 @@ class ValidationIssue:
 @dataclass
 class ValidationResult:
     """Result of spatial data validation."""
-_path: str
+    _path: str
     format_type: str
     is_valid: bool
     validation_level: ValidationLevel

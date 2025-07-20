@@ -334,7 +334,7 @@ class SpatialMCPTools:
                     report += f"  ❌ {issue}\n"
 
             if result.suggestions:
-                report += f"\n**Suggestionresult.suggestions)}):**\n"
+                report += f"\n**Suggestion {result.suggestions}:**\n"
                 for suggestion in result.suggestions:
                     report += f"  💡 {suggestion}\n"
 

@@ -12,7 +12,7 @@ import re
 from pathlib import Path
 from typing import Dict, List, Any, Optional, Union, Tuple
 from dataclasses import dataclass
-num import Enum
+from enum import Enum
 
 logger = logging.getLogger(__name__)
 
@@ -98,7 +98,7 @@ class BioinformaticsMetadataExtractor:
             try:
                 __import__(lib)
                 dependencies[lib] = True
-    except ImportError:
+            except ImportError:
                 dependencies[lib] = False
 
         self.dependencies = dependencies
