@@ -677,3 +677,487 @@ class BioinformaticsMetadataExtractor:
             'file_types': list(set(r.file_type for r in results)),
             'total_issues': sum(len(r.issues) for r in results)
         }
+
+    def extract_spatial_transcriptomics_metadata(self, file_path: Union[str, Path]) -> MetadataExtractionResult:
+        """Extract metadata specifically for spatial transcriptomics workflows and data.
+
+        Args:
+            file_path: Path to the spatial transcriptomics file
+
+        Returns:
+            MetadataExtractionResult with spatial-specific metadata
+        """
+        result = self.extract_metadata(file_path)
+
+        # Enhance with spatial transcriptomics specific analysis
+        if result.extraction_success:
+            self._enhance_spatial_metadata(result)
+            self._analyze_spatial_workflow_patterns(result)
+            self._assess_spatial_data_quality(result)
+
+        return result
+
+    def _enhance_spatial_metadata(self, result: MetadataExtractionResult) -> None:
+        """Enhance metadata with spatial transcriptomics specific information."""
+        file_path = Path(result.file_path)
+
+        try:
+            # Check for spatial transcriptomics specific patterns
+            if result.file_type.startswith('spatial'):
+                # Add spatial data specific metadata
+                self._extract_spatial_data_characteristics(file_path, result)
+
+            elif result.file_type.startswith('nextflow') or result.file_type.startswith('viash'):
+                # Check for spatial transcriptomics workflow patterns
+                self._identify_spatial_workflow_components(file_path, result)
+
+            # Check for spatial transcriptomics libraries and tools
+            self._identify_spatial_tools_and_libraries(result)
+
+        except Exception as e:
+            result.issues.append(f"Failed to enhance spatial metadata: {e}")
+
+    def _extract_spatial_data_characteristics(self, file_path: Path, result: MetadataExtractionResult) -> None:
+        """Extract characteristics specific to spatial data files."""
+        try:
+            # Use spatial validation to get detailed characteristics
+            from .spatial_validation import SpatialDataValidator, ValidationLevel
+
+            validator = SpatialDataValidator()
+            validation_result = validator.validate_file(file_path, ValidationLevel.DOMAIN)
+
+            # Add spatial characteristics as metadata fields
+            if validation_result.metadata:
+                for key, value in validation_result.metadata.items():
+                    importance = "high" if key in ['n_obs', 'n_vars', 'spatial_keys', 'components'] else "medium"
+
+                    result.metadata_fields.append(
+                        MetadataField(
+                            name=f"spatial_{key}",
+                            value=value,
+                            data_type=type(value).__name__,
+                            category="spatial_characteristics",
+                            description=f"Spatial data characteristic: {key}",
+                            importance=importance
+                        )
+                    )
+
+            # Add data quality assessment
+            quality_assessment = validator.assess_spatial_data_quality(file_path)
+            result.quality_metrics.update({
+                'spatial_quality_score': quality_assessment.get('overall_quality', 'unknown'),
+                'spatial_issues_count': quality_assessment.get('issues_found', 0),
+                'spatial_file_size_mb': quality_assessment.get('file_size_mb', 0)
+            })
+
+        except ImportError:
+            result.issues.append("Spatial validation module not available for enhanced analysis")
+        except Exception as e:
+            result.issues.append(f"Failed to extract spatial data characteristics: {e}")
+
+    def _identify_spatial_workflow_components(self, file_path: Path, result: MetadataExtractionResult) -> None:
+        """Identify spatial transcriptomics specific workflow components."""
+        try:
+            content = file_path.read_text(encoding='utf-8')
+
+            # Spatial transcriptomics specific patterns
+            spatial_patterns = {
+                'spatial_libraries': [
+                    'spatialdata', 'squidpy', 'scanpy', 'ata', 'spatstat',
+                    'seurat', 'giotto', 'stlearn', 'stereoscope'
+                ],
+                'spatial_processes': [
+                    'spatial_clustering', 'spatial_autocorrelation', 'spatial_deconvolution',
+                    'spatial_registration', 'spatial_segmentation', 'spatial_visualization'
+                ],
+                'spatial_file_formats': [
+                    '.h5ad', '.zarr', '.spatialdata', '.loom', '.h5seurat'
+                ],
+                'spatial_analysis_types': [
+                    'visium', '10x_genomics', 'slide_seq', 'merfish', 'seqfish',
+                    'osmfish', 'starmap', 'hdst', 'dbit_seq'
+                ]
+            }
+
+            content_lower = content.lower()
+
+            # Check for spatial libraries
+            found_libraries = [lib for lib in spatial_patterns['spatial_libraries']
+                             if lib in content_lower]
+            if found_libraries:
+                result.metadata_fields.append(
+                    MetadataField(
+                        name="spatial_libraries_detected",
+                        value=found_libraries,
+                        data_type="list",
+                        category="spatial_workflow",
+                        description="Spatial transcriptomics libraries found in workflow",
+                        importance="high"
+                    )
+                )
+
+            # Check for spatial processes
+            found_processes = [proc for proc in spatial_patterns['spatial_processes']
+                             if proc.replace('_', ' ') in content_lower or proc in content_lower]
+            if found_processes:
+                result.metadata_fields.append(
+                    MetadataField(
+                        name="spatial_processes_detected",
+                        value=found_processes,
+                        data_type="list",
+                        category="spatial_workflow",
+                        description="Spatial analysis processes found in workflow",
+                        importance="high"
+                    )
+                )
+
+            # Check for spatial analysis types
+            found_analysis_types = [atype for atype in spatial_patterns['spatial_analysis_types']
+                                  if atype in content_lower]
+            if found_analysis_types:
+                result.metadata_fields.append(
+                    MetadataField(
+                        name="spatial_analysis_types",
+                        value=found_analysis_types,
+                        data_type="list",
+                        category="spatial_workflow",
+                        description="Spatial transcriptomics platforms/methods detected",
+                        importance="high"
+                    )
+                )
+
+            # Check for file format handling
+            found_formats = [fmt for fmt in spatial_patterns['spatial_file_formats']
+                           if fmt in content_lower]
+            if found_formats:
+                result.metadata_fields.append(
+                    MetadataField(
+                        name="spatial_file_formats",
+                        value=found_formats,
+                        data_type="list",
+                        category="spatial_workflow",
+                        description="Spatial data formats handled by workflow",
+                        importance="medium"
+                    )
+                )
+
+        except Exception as e:
+            result.issues.append(f"Failed to identify spatial workflow components: {e}")
+
+    def _identify_spatial_tools_and_libraries(self, result: MetadataExtractionResult) -> None:
+        """Identify spatial transcriptomics tools and libraries from existing metadata."""
+        try:
+            # Check existing metadata fields for spatial tools
+            spatial_tools = set()
+            spatial_libraries = set()
+
+            for field in result.metadata_fields:
+                if field.category in ['dependencies', 'tools', 'libraries']:
+                    if isinstance(field.value, list):
+                        values = field.value
+                    else:
+                        values = [field.value]
+
+                    for value in values:
+                        value_str = str(value).lower()
+
+                        # Check for spatial transcriptomics tools
+                        spatial_tool_patterns = [
+                            'spatial', 'squidpy', 'scanpy', 'anndata', 'spatialdata',
+                            'seurat', 'giotto', 'stlearn', 'stereoscope', 'cell2location',
+                            'tangram', 'novosparc', 'paste', 'harmony'
+                        ]
+
+                        for pattern in spatial_tool_patterns:
+                            if pattern in value_str:
+                                if 'library' in field.name.lower() or 'import' in field.name.lower():
+                                    spatial_libraries.add(value)
+                                else:
+                                    spatial_tools.add(value)
+
+            # Add spatial tools metadata
+            if spatial_tools:
+                result.metadata_fields.append(
+                    MetadataField(
+                        name="spatial_tools_identified",
+                        value=list(spatial_tools),
+                        data_type="list",
+                        category="spatial_tools",
+                        description="Spatial transcriptomics tools identified",
+                        importance="high"
+                    )
+                )
+
+            if spatial_libraries:
+                result.metadata_fields.append(
+                    MetadataField(
+                        name="spatial_libraries_identified",
+                        value=list(spatial_libraries),
+                        data_type="list",
+tegory="spatial_tools",
+                        description="Spatial transcriptomics libraries identified",
+                        importance="high"
+                    )
+                )
+
+        except Exception as e:
+            result.issues.append(f"Failed to identify spatial tools and libraries: {e}")
+
+    def _analyze_spatial_workflow_patterns(self, result: MetadataExtractionResult) -> None:
+        """Analyze patterns specific to spatial transcriptomics workflows."""
+        try:
+            # Count spatial-related metadata fields
+            spatial_fields = [f for f in result.metadata_fields if 'spatial' in f.name.lower()]
+
+            if spatial_fields:
+                result.quality_metrics['spatial_metadata_richness'] = len(spatial_fields)
+
+                # Categorize spatial workflow complexity
+                if len(spatial_fields) >= 5:
+                    complexity = "high"
+                elif len(spatial_fields) >= 3:
+                    complexity = "medium"
+                else:
+                    complexity = "low"
+
+                result.quality_metrics['spatial_workflow_complexity'] = complexity
+
+                # Add suggestions based on complexity
+                if complexity == "low":
+                    result.suggestions.append(
+                        "Consider adding more spatial-specific metadata for better workflow documentation"
+                    )
+                elif complexity == "high":
+                    result.suggestions.append(
+                        "Rich spatial metadata detected - ensure proper documentation of spatial parameters"
+                    )
+
+            # Check for common spatial transcriptomics workflow patterns
+            workflow_patterns = {
+                'preprocessing': ['normalization', 'filtering', 'quality_control'],
+                'spatial_analysis': ['clustering', 'neighborhood', 'autocorrelation'],
+                'visualization': ['plotting', 'embedding', 'dimensionality_reduction'],
+                'integration': ['batch_correction', 'alignment', 'registration']
+            }
+
+            detected_patterns = {}
+            for pattern_type, keywords in workflow_patterns.items():
+                found_keywords = []
+                for field in result.metadata_fields:
+                    field_text = f"{field.name} {field.value}".lower()
+                    for keyword in keywords:
+                        if keyword in field_text:
+                            found_keywords.append(keyword)
+
+                if found_keywords:
+                    detected_patterns[pattern_type] = list(set(found_keywords))
+
+            if detected_patterns:
+                result.metadata_fields.append(
+                    MetadataField(
+                        name="spatial_workflow_patterns",
+                        value=detected_patterns,
+                        data_type="dict",
+                        category="spatial_workflow",
+                        description="Spatial transcriptomics workflow patterns detected",
+                        importance="medium"
+                    )
+                )
+
+        except Exception as e:
+            result.issues.append(f"Failed to analyze spatial workflow patterns: {e}")
+
+    def _assess_spatial_data_quality(self, result: MetadataExtractionResult) -> None:
+        """Assess data quality specific to spatial transcriptomics."""
+        try:
+            # Check for quality indicators in metadata
+            quality_indicators = {
+                'has_spatial_coordinates': False,
+                'has_expression_data': False,
+                'has_quality_metrics': False,
+                'has_spatial_images': False,
+                'has_proper_annotations': False
+            }
+
+            for field in result.metadata_fields:
+                field_name_lower = field.name.lower()
+
+                if 'spatial' in field_name_lower and 'coord' in field_name_lower:
+                    quality_indicators['has_spatial_coordinates'] = True
+                elif 'expression' in field_name_lower or 'matrix' in field_name_lower:
+                    quality_indicators['has_expression_data'] = True
+                elif 'quality' in field_name_lower or 'qc' in field_name_lower:
+                    quality_indicators['has_quality_metrics'] = True
+                elif 'image' in field_name_lower:
+                    quality_indicators['has_spatial_images'] = True
+                elif 'annotation' in field_name_lower or 'metadata' in field_name_lower:
+                    quality_indicators['has_proper_annotations'] = True
+
+            # Calculate quality score
+            quality_score = sum(quality_indicators.values()) / len(quality_indicators)
+            result.quality_metrics['spatial_data_quality_score'] = quality_score
+
+            # Add quality-based suggestions
+            if quality_score < 0.5:
+                result.suggestions.append(
+                    "Spatial data appears to be missing key components - verify completeness"
+                )
+            elif quality_score >= 0.8:
+                result.suggestions.append(
+                    "Spatial data appears comprehensive and well-structured"
+                )
+
+            # Specific quality checks
+            if not quality_indicators['has_spatial_coordinates']:
+                result.suggestions.append(
+                    "Add spatial coordinate information for spatial analysis"
+                )
+
+            if not quality_indicators['has_expression_data']:
+                result.suggestions.append(
+                    "Ensure expression data is included for transcriptomics analysis"
+                )
+
+        except Exception as e:
+            result.issues.append(f"Failed to assess spatial data quality: {e}")
+
+    def analyze_workflow_configuration_advanced(
+        self,
+        file_path: Union[str, Path],
+        include_spatial_analysis: bool = True,
+        include_dependency_graph: bool = True
+    ) -> Dict[str, Any]:
+        """Perform advanced workflow configuration analysis.
+
+        Args:
+            file_path: Path to the workflow configuration file
+            include_spatial_analysis: Whether to include spatial transcriptomics analysis
+            include_dependency_graph: Whether to build dependency graph
+
+        Returns:
+            Advanced workflow analysis results
+        """
+        result = self.extract_metadata(file_path)
+
+        analysis = {
+            'file_path': str(file_path),
+            'file_type': result.file_type,
+            'extraction_success': result.extraction_success,
+            'workflow_complexity': 'unknown',
+            'spatial_compatibility': False,
+            'dependency_graph': {},
+            'optimization_suggestions': [],
+            'compatibility_issues': []
+        }
+
+        if not result.extraction_success:
+            analysis['compatibility_issues'].extend(result.issues)
+            return analysis
+
+        try:
+            # Assess workflow complexity
+            complexity_indicators = {
+                'process_count': 0,
+                'parameter_count': 0,
+                'dependency_count': 0,
+                'container_count': 0
+            }
+
+            for field in result.metadata_fields:
+                if 'process' in field.name.lower():
+                    if isinstance(field.value, list):
+                        complexity_indicators['process_count'] += len(field.value)
+                    elif isinstance(field.value, int):
+                        complexity_indicators['process_count'] += field.value
+                elif 'parameter' in field.name.lower() or 'argument' in field.name.lower():
+                    if isinstance(field.value, int):
+                        complexity_indicators['parameter_count'] += field.value
+                elif 'container' in field.name.lower() or 'docker' in field.name.lower():
+                    if isinstance(field.value, list):
+                        complexity_indicators['container_count'] += len(field.value)
+                elif 'librar' in field.name.lower() or 'depend' in field.name.lower():
+                    if isinstance(field.value, list):
+                        complexity_indicators['dependency_count'] += len(field.value)
+
+            # Calculate complexity score
+            complexity_score = (
+                complexity_indicators['process_count'] * 2 +
+                complexity_indicators['parameter_count'] +
+                complexity_indicators['dependency_count'] +
+                complexity_indicators['container_count']
+            )
+
+            if complexity_score >= 20:
+                analysis['workflow_complexity'] = 'high'
+            elif complexity_score >= 10:
+                analysis['workflow_complexity'] = 'medium'
+            else:
+                analysis['workflow_complexity'] = 'low'
+
+            # Spatial compatibility analysis
+            if include_spatial_analysis:
+                spatial_fields = [f for f in result.metadata_fields if 'spatial' in f.name.lower()]
+                spatial_libraries = [f for f in result.metadata_fields
+                                   if any(lib in str(f.value).lower() for lib in
+                                         ['spatialdata', 'squidpy', 'scanpy', 'seurat'])]
+
+                analysis['spatial_compatibility'] = len(spatial_fields) > 0 or len(spatial_libraries) > 0
+
+                if analysis['spatial_compatibility']:
+                    analysis['optimization_suggestions'].append(
+                        "Workflow appears compatible with spatial transcriptomics data"
+                    )
+                else:
+                    analysis['optimization_suggestions'].append(
+                        "Consider adding spatial transcriptomics libraries for spatial analysis"
+                    )
+
+            # Dependency graph analysis
+            if include_dependency_graph:
+                containers = []
+                libraries = []
+                processes = []
+
+                for field in result.metadata_fields:
+                    if 'container' in field.name.lower():
+                        if isinstance(field.value, list):
+                            containers.extend(field.value)
+                        else:
+                            containers.append(field.value)
+                    elif 'librar' in field.name.lower():
+                        if isinstance(field.value, list):
+                            libraries.extend(field.value)
+                        else:
+                            libraries.append(field.value)
+                    elif 'process' in field.name.lower():
+                        if isinstance(field.value, list):
+                            processes.extend(field.value)
+                        else:
+                            processes.append(field.value)
+
+                analysis['dependency_graph'] = {
+                    'containers': list(set(containers)),
+                    'libraries': list(set(libraries)),
+                    'processes': list(set(processes))
+                }
+
+            # Generate optimization suggestions
+            if complexity_indicators['container_count'] == 0:
+                analysis['optimization_suggestions'].append(
+                    "Consider adding container specifications for reproducibility"
+                )
+
+            if complexity_indicators['process_count'] > 10:
+                analysis['optimization_suggestions'].append(
+                    "High process count detected - consider workflow modularization"
+                )
+
+            if complexity_indicators['parameter_count'] > 20:
+                analysis['optimization_suggestions'].append(
+                    "Many parameters detected - consider parameter grouping or defaults"
+                )
+
+        except Exception as e:
+            analysis['compatibility_issues'].append(f"Advanced analysis failed: {e}")
+
+        return analysis
