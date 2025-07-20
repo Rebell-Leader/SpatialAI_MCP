@@ -13,14 +13,24 @@
   - Create pip-installable package with entry point and CLI command
   - _Requirements: 4.1, 4.2, 4.3, 10.1, 10.4_
 
-- [ ] 2. Implement spatial transcriptomics data validation (Continue.dev handles basic file ops)
-  - [ ] 2.1 Create spatial data format validation
+- [-] 2. Implement spatial transcriptomics data validation (Continue.dev handles basic file ops)
+
+
+
+
+
+  - [-] 2.1 Create spatial data format validation
+
+
+
     - Write SpatialDataValidator for SpatialData, zarr, and AnnData format validation
     - Implement integrity checking specific to spatial transcriptomics datasets
     - Add domain-specific validation for spatial biology data structures
     - _Requirements: 5.2, 5.4_
 
   - [ ] 2.2 Add bioinformatics metadata extraction and analysis
+
+
     - Implement metadata extraction for spatial transcriptomics data formats
     - Add workflow configuration analysis for Nextflow and Viash files
     - Create data quality assessment for spatial biology datasets

@@ -9,6 +9,7 @@ from fastmcp import FastMCP
 from .config import Config, ConfigManager, setup_logging
 from .tool_detection import ToolDetector
 from .exceptions import MCPServerError, DependencyError
+from .spatial_tools import SpatialMCPTools
 
 
 logger = logging.getLogger(__name__)
@@ -20,6 +21,7 @@ class MCPServer:
     def __init__(self, config: Optional[Config] = None):
         self.config = config or ConfigManager().load_config()
         self.tool_detector = ToolDetector(self.config.tools)
+        self.spatial_tools = SpatialMCPTools()
 
         # Initialize FastMCP server
         self.mcp = FastMCP("OpenProblems Spatial MCP")
@@ -121,6 +123,149 @@ class MCPServer:
             except Exception as e:
                 logger.error(f"Server info retrieval failed: {e}")
                 return f"❌ Server info retrieval failed: {e}"
+
+        # Spatial transcriptomics validation tools
+        @self.mcp.tool()
+        def validate_spatial_data(
+            file_path: str,
+            validation_level: str = "structure",
+            return_format: str = "summary"
+        ) -> str:
+            """Validate spatial transcriptomics data file for format integrity and domain-specific requirements.
+
+            Args:
+                file_path: Path to the spatial data file (SpatialData, zarr, or AnnData format)
+                validation_level: Level of validation - basic, structure, integrity, or domain
+                return_format: Output format - summary, detailed, or json
+
+            Returns:
+                Formatted validation results with issues and suggestions
+            """
+            return self.spatial_tools.validate_spatial_data(file_path, validation_level, return_format)
+
+        @self.mcp.tool()
+        def validate_multiple_spatial_files(
+            file_paths: str,
+            validation_level: str = "structure",
+            return_format: str = "summary"
+        ) -> str:
+            """Validate multiple spatial transcriptomics data files and provide summary statistics.
+
+            Args:
+                file_paths: JSON string containing list of file paths to validate
+                validation_level: Level of validation - basic, structure, integrity, or domain
+                return_format: Output format - summary, detailed, or json
+
+            Returns:
+                Formatted validation results for all files with summary statistics
+            """
+            return self.spatial_tools.validate_multiple_spatial_files(file_paths, validation_level, return_format)
+
+        @self.mcp.tool()
+        def analyze_spatial_metadata(
+            file_path: str,
+            extract_coordinates: bool = True,
+            extract_gene_info: bool = True
+        ) -> str:
+            """Extract and analyze metadata from spatial transcriptomics data files.
+
+            Args:
+                file_path: Path to the spatial data file
+                extract_coordinates: Whether to extract spatial coordinate information
+                extract_gene_info: Whether to extract gene/feature information
+
+            Returns:
+                Detailed metadata analysis including data dimensions, spatial info, and quality insights
+            """
+            return self.spatial_tools.analyze_spatial_metadata(file_path, extract_coordinates, extract_gene_info)
+
+        @self.mcp.tool()
+        def check_spatial_data_compatibility(
+            file_paths: str,
+            check_coordinates: bool = True,
+            check_gene_overlap: bool = True
+        ) -> str:
+            """Check compatibility between multiple spatial data files for joint analysis.
+
+            Args:
+                file_paths: JSON string containing list of file paths to compare
+                check_coordinates: Whether to check spatial coordinate compatibility
+                check_gene_overlap: Whether to check gene/feature overlap
+
+            Returns:
+                Compatibility analysis report with recommendations for data harmonization
+            """
+            return self.spatial_tools.check_spatial_data_compatibility(file_paths, check_coordinates, check_gene_overlap)
+
+        @self.mcp.tool()
+        def extract_bioinformatics_metadata(
+            file_path: str,
+            include_quality_assessment: bool = True
+        ) -> str:
+            """Extract comprehensive metadata from bioinformatics files including Nextflow, Viash, and spatial data.
+
+            Args:
+                file_path: Path to the bioinformatics file to analyze
+                include_quality_assessment: Whether to include quality assessment and suggestions
+
+            Returns:
+                Detailed metadata extraction results with quality insights and recommendations
+            """
+            return self.spatial_tools.extract_bioinformatics_metadata(file_path, include_quality_assessment)
+
+        @self.mcp.tool()
+        def analyze_workflow_configuration(
+            file_path: str,
+            check_dependencies: bool = True,
+            validate_structure: bool = True
+        ) -> str:
+            """Analyze Nextflow or Viash workflow configuration files for structure and dependencies.
+
+            Args:
+                file_path: Path to the workflow configuration file
+                check_dependencies: Whether to analyze dependencies and requirements
+                validate_structure: Whether to validate configuration structure
+
+            Returns:
+                Comprehensive workflow configuration analysis with recommendations
+            """
+            return self.spatial_tools.analyze_workflow_configuration(file_path, check_dependencies, validate_structure)
+
+        @self.mcp.tool()
+        def assess_data_quality(
+            file_paths: str,
+            include_spatial_validation: bool = True,
+            include_metadata_analysis: bool = True
+        ) -> str:
+            """Assess data quality across multiple bioinformatics files with comprehensive analysis.
+
+            Args:
+                file_paths: JSON string containing list of file paths to assess
+                include_spatial_validation: Whether to include spatial data validation
+                include_metadata_analysis: Whether to include metadata quality analysis
+
+            Returns:
+                Comprehensive data quality assessment report with statistics and recommendations
+            """
+            return self.spatial_tools.assess_data_quality(file_paths, include_spatial_validation, include_metadata_analysis)
+
+        @self.mcp.tool()
+        def analyze_workflow_dependencies(
+            file_paths: str,
+            include_containers: bool = True,
+            include_libraries: bool = True
+        ) -> str:
+            """Analyze dependencies across multiple workflow files to identify requirements and conflicts.
+
+            Args:
+                file_paths: JSON string containing list of workflow file paths
+                include_containers: Whether to analyze container dependencies
+                include_libraries: Whether to analyze library dependencies
+
+            Returns:
+                Comprehensive workflow dependency analysis with consolidation recommendations
+            """
+            return self.spatial_tools.analyze_workflow_dependencies(file_paths, include_containers, include_libraries)
 
     def _setup_resources(self) -> None:
         """Set up MCP resources using FastMCP decorators."""
