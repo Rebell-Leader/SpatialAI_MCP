@@ -33,17 +33,17 @@ class TestSpatialDataValidator:
         # Test .spatialdata extension
         path = Path("test.spatialdata")
         result = self.validator._detect_format(path)
-        assert result == "spatialdata"
+        assert result == "spatialdata", f"Expected 'spatialdata', got '{result}' for {path}"
 
         # Test .zarr extension (should check if it's SpatialData)
         path = Path("test.zarr")
         with patch.object(self.validator, '_is_spatialdata_zarr', return_value=True):
             result = self.validator._detect_format(path)
-            assert result == "spatialdata"
+            assert result == "spatialdata", f"Expected 'spatialdata', got '{result}' for zarr with SpatialData"
 
         with patch.object(self.validator, '_is_spatialdata_zarr', return_value=False):
             result = self.validator._detect_format(path)
-            assert result == "zarr"
+            assert result == "zarr", f"Expected 'zarr', got '{result}' for zarr without SpatialData"
 
     def test_detect_format_anndata(self):
         """Test format detection for AnnData files."""

@@ -216,20 +216,19 @@ class TestBioinformaticsMetadataExtractor:
 
     def test_extract_python_script_metadata(self):
         """Test Python script metadata extraction."""
-        python_script = """
-        import pandas as pd
-        import numpy as np
-        import scanpy as sc
-        import spatialdata as sd
+        python_script = """import pandas as pd
+import numpy as np
+import scanpy as sc
+import spatialdata as sd
 
-        def process_data(input_file):
-            # Process spatial transcriptomics data
-            return data
+def process_data(input_file):
+    # Process spatial transcriptomics data
+    return data
 
-        def analyze_results(data):
-            # Analyze results
-            return analysis
-        """
+def analyze_results(data):
+    # Analyze results
+    return analysis
+"""
 
         with tempfile.TemporaryDirectory() as temp_dir:
             script_path = Path(temp_dir) / "script.py"

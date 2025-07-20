@@ -15,7 +15,9 @@ def test_file_type_detection():
 
     try:
         from openproblems_mcp.metadata_analysis import BioinformaticsMetadataExtractor
+        from openproblems_mcp.spatial_validation import SpatialDataValidator
 
+        # Test metadata extractor
         extractor = BioinformaticsMetadataExtractor()
 
         # Test script.py detection
@@ -29,6 +31,15 @@ def test_file_type_detection():
         result = extractor._detect_file_type(config_path)
         print(f"   nextflow.config detected as: {result}")
         assert result == "nextflow_config", f"Expected 'nextflow_config', got '{result}'"
+
+        # Test spatial validator
+        validator = SpatialDataValidator()
+
+        # Test .spatialdata detection
+        spatialdata_path = Path("test.spatialdata")
+        result = validator._detect_format(spatialdata_path)
+        print(f"   test.spatialdata detected as: {result}")
+        assert result == "spatialdata", f"Expected 'spatialdata', got '{result}'"
 
         print("✅ File type detection works correctly")
         return True
