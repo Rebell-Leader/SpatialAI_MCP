@@ -120,7 +120,7 @@ class ToolDetector:
                 [executable, '--version'],
                 capture_output=True,
                 text=True,
-=10
+                timeout=10
             )
 
             if result.returncode == 0:

@@ -10,8 +10,8 @@ from pathlib import Path
 from .exceptions import ConfigurationError
 
 
-@datac
- ToolConfig:
+@dataclass
+class ToolConfig:
     """Configuration for external bioinformatics tools."""
     nextflow_executable: str = "nextflow"
     viash_executable: str = "viash"
@@ -195,4 +195,4 @@ def setup_logging(config: Config) -> None:
 
     # Set specific logger levels
     logging.getLogger('openproblems_mcp').setLevel(log_level)
-    logging.getLogger('mcp').setLevel(logging.WARNING)  # Reduce MCP library noise
+    logging.getLogger('fastmcp').setLevel(logging.WARNING)  # Reduce FastMCP library noise
