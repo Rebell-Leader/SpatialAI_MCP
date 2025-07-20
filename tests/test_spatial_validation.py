@@ -33,7 +33,7 @@ class TestSpatialDataValidator:
         # Test .spatialdata extension
         path = Path("test.spatialdata")
         result = self.validator._detect_format(path)
-        assult == "spatialdata"
+        assert result == "spatialdata"
 
         # Test .zarr extension (should check if it's SpatialData)
         path = Path("test.zarr")

@@ -51,7 +51,7 @@ class TestBioinformaticsMetadataExtractor:
 
         # Test nextflow workflow
         path = Path("main.nf")
-        result = self.extror._detect_file_type(path)
+        result = self.extractor._detect_file_type(path)
         assert result == "nextflow_workflow"
 
         # Test nextflow params
@@ -231,24 +231,21 @@ class TestBioinformaticsMetadataExtractor:
             return analysis
         """
 
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.py', delete=False) as f:
-            f.write(python_script)
-            f.flush()
+        with tempfile.TemporaryDirectory() as temp_dir:
+            script_path = Path(temp_dir) / "script.py"
+            with open(script_path, 'w') as f:
+                f.write(python_script)
 
-            try:
-                result = self.extractor.extract_metadata(f.name)
+            result = self.extractor.extract_metadata(str(script_path))
 
-                assert result.extraction_success is True
-                assert result.file_type == "viash_script"
+            assert result.extraction_success is True
+            assert result.file_type == "viash_script"
 
-                # Check for Python-specific metadata
-                field_names = [field.name for field in result.metadata_fields]
-                assert "script_language" in field_names
-                assert "bioinformatics_libraries" in field_names
-                assert "function_count" in field_names
-
-            finally:
-                Path(f.name).unlink()
+            # Check for Python-specific metadata
+            field_names = [field.name for field in result.metadata_fields]
+            assert "script_language" in field_names
+            assert "bioinformatics_libraries" in field_names
+            assert "function_count" in field_names
 
     def test_analyze_workflow_dependencies(self):
         """Test workflow dependency analysis."""

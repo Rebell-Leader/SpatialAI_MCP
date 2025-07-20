@@ -79,7 +79,7 @@ class TestSpatialMCPTools:
 
         assert "❌" in result
         assert "Invalid" in result
-        assert "Issues Found: 2" in result
+        assert "**Issues Found:** 2" in result
         assert "Errors: 1" in result
         assert "Warnings: 1" in result
 
