@@ -30,16 +30,16 @@ python tests/test_runner.py --all
 
 ### Using pytest directly
 ```bash
-# Install in development mode first
-pip install -e .
-
-# Run all tests
+# Run all tests (pytest.ini handles the configuration)
 pytest tests/ -v
 
 # Run specific test file
 pytest tests/test_spatial_validation.py -v
 
-# Run with coverage
+# Run simple test to verify setup
+pytest test_simple.py -v
+
+# Run with coverage (if coverage is installed)
 pytest tests/ --cov=openproblems_mcp --cov-report=html
 ```
 
@@ -61,15 +61,20 @@ python test_spatial_tools.py
 ### Import Errors
 If you get `ModuleNotFoundError: No module named 'openproblems_mcp'`:
 
-1. Try installing in development mode:
+1. First try the simple test:
    ```bash
-   pip install -e .
+   python test_simple.py
    ```
 
-2. Or use the provided test runners that handle paths automatically:
+2. Use the provided test runners that handle paths automatically:
    ```bash
    python run_tests.py
    python verify_tests.py
+   ```
+
+3. If needed, install in development mode:
+   ```bash
+   pip install -e .
    ```
 
 ### Missing Dependencies

@@ -98,9 +98,7 @@ def run_pytest_tests():
         # Run tests with proper path setup
         exit_code = pytest.main([
             "tests/",
-            "-v",
-            "--tb=short",
-            f"--pythonpath={src_path}"
+            "--color=yes"
         ])
 
         if exit_code == 0:

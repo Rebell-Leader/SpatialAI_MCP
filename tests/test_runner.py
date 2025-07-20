@@ -27,10 +27,7 @@ def run_spatial_tests():
 
     # Run tests with verbose output
     exit_code = pytest.main([
-        "-v",
-        "--tb=short",
         "--color=yes",
-        f"--pythonpath={src_path}",
         *test_files
     ])
 
@@ -49,10 +46,7 @@ def run_quick_tests():
 
     # Run basic import and initialization tests
     exit_code = pytest.main([
-        "-v",
-        "--tb=short",
         "--color=yes",
-        f"--pythonpath={src_path}",
         "-k", "test_init or test_detect_format or test_metadata_field_creation",
         "tests/test_spatial_validation.py",
         "tests/test_metadata_analysis.py",
@@ -68,10 +62,7 @@ def run_integration_tests():
     print("=" * 30)
 
     exit_code = pytest.main([
-        "-v",
-        "--tb=short",
         "--color=yes",
-        f"--pythonpath={src_path}",
         "-k", "integration or end_to_end",
         "tests/test_spatial_validation.py",
         "tests/test_metadata_analysis.py",
