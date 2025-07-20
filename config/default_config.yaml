@@ -1,0 +1,59 @@
+# Default configuration for OpenProblems Spatial Transcriptomics MCP Server
+# This file provides sensible defaults for local development
+
+server:
+  # Workspace root directory (relative to current working directory)
+  workspace_root: "."
+
+  # Maximum number of concurrent tool executions
+  max_concurrent_executions: 3
+
+  # Default timeout for tool executions (in seconds)
+  default_timeout_seconds: 3600
+
+  # Log retention period (in days)
+  log_retention_days: 7
+
+  # Maximum memory per execution (in MB)
+  max_memory_per_execution_mb: 4096
+
+  # Logging level (DEBUG, INFO, WARNING, ERROR, CRITICAL)
+  log_level: "INFO"
+
+  # Allowed file extensions for file operations
+  allowed_file_extensions:
+    - ".py"
+    - ".R"
+    - ".nf"
+    - ".yaml"
+    - ".yml"
+    - ".json"
+    - ".txt"
+    - ".md"
+    - ".csv"
+    - ".tsv"
+    - ".h5"
+    - ".h5ad"
+    - ".zarr"
+    - ".sh"
+    - ".bash"
+    - ".dockerfile"
+    - ".Dockerfile"
+
+  # Blocked paths (empty by default for local development)
+  blocked_paths: []
+
+tools:
+  # Executable paths for bioinformatics tools
+  # These should be available in your PATH
+  nextflow_executable: "nextflow"
+  viash_executable: "viash"
+  docker_executable: "docker"
+  git_executable: "git"
+  python_executable: "python"
+
+  # Default Nextflow profile to use
+  default_nextflow_profile: "standard"
+
+  # Default container registry
+  default_container_registry: "docker.io"
