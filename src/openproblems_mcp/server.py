@@ -42,7 +42,7 @@ class MCPServer:
                     "workspace_accessible": True
                 })
 
-          ync def atus_text = "✅ Server Health Check\n\n"
+                status_text = "✅ Server Health Check\n\n"
                 status_text += f"Tools Available: {health_status['tools_available']}/{health_status['tools_total']}\n"
                 status_text += f"All Tools Available: {'Yes' if health_status['all_tools_available'] else 'No'}\n\n"
 
