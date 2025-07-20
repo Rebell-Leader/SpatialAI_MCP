@@ -9,13 +9,18 @@ __author__ = "OpenProblems MCP Contributors"
 __email__ = "info@openproblems.bio"
 
 from .server import MCPServer
-from .config import ServerConfig, ToolConfig
+from .config import Config, ServerConfig, ToolConfig, ConfigManager
 from .exceptions import MCPServerError, ExecutionError, ValidationError
+from .tool_detection import ToolDetector, ToolInfo
 
 __all__ = [
     "MCPServer",
+    "Config",
     "ServerConfig",
     "ToolConfig",
+    "ConfigManager",
+    "ToolDetector",
+    "ToolInfo",
     "MCPServerError",
     "ExecutionError",
     "ValidationError",

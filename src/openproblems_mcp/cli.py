@@ -7,7 +7,7 @@ import os
 from pathlib import Path
 from typing import Optional
 
-from .cog import ConfigManager, setup_logging
+from .config import ConfigManager, setup_logging
 from .server import MCPServer
 from .tool_detection import ToolDetector
 from .exceptions import ConfigurationError, DependencyError

@@ -29,7 +29,7 @@ async def main_async(config_path: Optional[str] = None) -> None:
 
         # Create and run server
         server = MCPServer(config)
-        await server.run_stdio()
+        await server.run()
 
     except ConfigurationError as e:
         print(f"Configuration error: {e}", file=sys.stderr)
