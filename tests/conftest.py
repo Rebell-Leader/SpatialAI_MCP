@@ -1,10 +1,15 @@
 """Pytest configuration and fixtures for spatial transcriptomics tests."""
 
+import sys
+from pathlib import Path
+
+# Add src to Python path for imports
+sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
+
 import pytest
 import tempfile
 import json
 import yaml
-from pathlib import Path
 from typing import Dict, Any
 
 

@@ -7,7 +7,7 @@ import yaml
 from pathlib import Path
 from unittest.mock import Mock, patch, mock_open
 
-from src.openproblems_mcp.metadata_analysis import (
+from openproblems_mcp.metadata_analysis import (
     BioinformaticsMetadataExtractor,
     MetadataType,
     MetadataField,

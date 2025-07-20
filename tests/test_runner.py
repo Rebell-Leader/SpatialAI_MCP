@@ -1,11 +1,17 @@
 """Test runner for spatial transcriptomics validation and metadata analysis tools."""
 
 import sys
+import os
 import pytest
 from pathlib import Path
 
-# Add src to path for imports
-sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
+# Set up paths
+project_root = Path(__file__).parent.parent
+src_path = project_root / "src"
+sys.path.insert(0, str(src_path))
+
+# Change to project root for consistent test execution
+os.chdir(project_root)
 
 
 def run_spatial_tests():
@@ -24,6 +30,7 @@ def run_spatial_tests():
         "-v",
         "--tb=short",
         "--color=yes",
+        f"--pythonpath={src_path}",
         *test_files
     ])
 
@@ -45,6 +52,7 @@ def run_quick_tests():
         "-v",
         "--tb=short",
         "--color=yes",
+        f"--pythonpath={src_path}",
         "-k", "test_init or test_detect_format or test_metadata_field_creation",
         "tests/test_spatial_validation.py",
         "tests/test_metadata_analysis.py",
@@ -63,6 +71,7 @@ def run_integration_tests():
         "-v",
         "--tb=short",
         "--color=yes",
+        f"--pythonpath={src_path}",
         "-k", "integration or end_to_end",
         "tests/test_spatial_validation.py",
         "tests/test_metadata_analysis.py",

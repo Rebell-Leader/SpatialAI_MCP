@@ -6,7 +6,7 @@ import json
 from pathlib import Path
 from unittest.mock import Mock, patch, mock_open
 
-from src.openproblems_mcp.spatial_validation import (
+from openproblems_mcp.spatial_validation import (
     SpatialDataValidator,
     ValidationLevel,
     ValidationStatus,

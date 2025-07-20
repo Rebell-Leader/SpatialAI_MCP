@@ -6,9 +6,9 @@ import tempfile
 from pathlib import Path
 from unittest.mock import Mock, patch, MagicMock
 
-from src.openproblems_mcp.spatial_tools import SpatialMCPTools
-from src.openproblems_mcp.spatial_validation import ValidationResult, ValidationLevel, ValidationStatus, ValidationIssue
-from src.openproblems_mcp.metadata_analysis import MetadataExtractionResult, MetadataField
+from openproblems_mcp.spatial_tools import SpatialMCPTools
+from openproblems_mcp.spatial_validation import ValidationResult, ValidationLevel, ValidationStatus, ValidationIssue
+from openproblems_mcp.metadata_analysis import MetadataExtractionResult, MetadataField
 
 
 class TestSpatialMCPTools:
@@ -23,7 +23,7 @@ class TestSpatialMCPTools:
         assert hasattr(self.tools, 'validator')
         assert hasattr(self.tools, 'metadata_extractor')
 
-    @patch('src.openproblems_mcp.spatial_tools.SpatialDataValidator')
+    @patch('openproblems_mcp.spatial_tools.SpatialDataValidator')
     def test_validate_spatial_data_success(self, mock_validator_class):
         """Test successful spatial data validation."""
         # Mock validator and result
@@ -51,7 +51,7 @@ class TestSpatialMCPTools:
         assert "anndata" in result
         assert "Valid" in result
 
-    @patch('src.openproblems_mcp.spatial_tools.SpatialDataValidator')
+    @patch('openproblems_mcp.spatial_tools.SpatialDataValidator')
     def test_validate_spatial_data_with_issues(self, mock_validator_class):
         """Test spatial data validation with issues."""
         # Mock validator and result with issues
@@ -102,7 +102,7 @@ class TestSpatialMCPTools:
 
         assert "❌ file_paths must be a JSON list" in result
 
-    @patch('src.openproblems_mcp.spatial_tools.SpatialDataValidator')
+    @patch('openproblems_mcp.spatial_tools.SpatialDataValidator')
     def test_validate_multiple_spatial_files_success(self, mock_validator_class):
         """Test successful multiple file validation."""
         # Mock validator
@@ -138,7 +138,7 @@ class TestSpatialMCPTools:
         assert "Valid Files: 1" in result
         assert "Success Rate: 50.0%" in result
 
-    @patch('src.openproblems_mcp.spatial_tools.SpatialDataValidator')
+    @patch('openproblems_mcp.spatial_tools.SpatialDataValidator')
     def test_analyze_spatial_metadata_success(self, mock_validator_class):
         """Test successful spatial metadata analysis."""
         # Mock validator
@@ -172,7 +172,7 @@ class TestSpatialMCPTools:
         assert "Number of Variables: 2000" in result
         assert "Spatial Coordinate Keys: X_spatial" in result
 
-    @patch('src.openproblems_mcp.spatial_tools.SpatialDataValidator')
+    @patch('openproblems_mcp.spatial_tools.SpatialDataValidator')
     def test_analyze_spatial_metadata_validation_failed(self, mock_validator_class):
         """Test spatial metadata analysis with validation failure."""
         # Mock validator
@@ -210,7 +210,7 @@ class TestSpatialMCPTools:
 
         assert "❌ Need at least 2 file paths" in result
 
-    @patch('src.openproblems_mcp.spatial_tools.SpatialDataValidator')
+    @patch('openproblems_mcp.spatial_tools.SpatialDataValidator')
     def test_check_spatial_data_compatibility_success(self, mock_validator_class):
         """Test successful compatibility check."""
         # Mock validator
@@ -236,7 +236,7 @@ class TestSpatialMCPTools:
         assert "✅ All files use the same format: anndata" in result
         assert "✅ Consistent gene count: 2000 genes" in result
 
-    @patch('src.openproblems_mcp.spatial_tools.BioinformaticsMetadataExtractor')
+    @patch('openproblems_mcp.spatial_tools.BioinformaticsMetadataExtractor')
     def test_extract_bioinformatics_metadata_success(self, mock_extractor_class):
         """Test successful bioinformatics metadata extraction."""
         # Mock extractor
