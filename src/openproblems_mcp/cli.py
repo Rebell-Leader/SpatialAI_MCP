@@ -28,10 +28,10 @@ def cli():
 )
 def serve(config: Optional[str]):
     """Start the MCP server."""
-    from .main import main_async
+    from .main import main_sync
 
     try:
-        asyncio.run(main_async(config))
+        main_sync(config)
     except KeyboardInterrupt:
         click.echo("Server stopped.")
 

@@ -1,6 +1,5 @@
 """Main entry point for the OpenProblems MCP Server."""
 
-import asyncio
 import logging
 import sys
 from typing import Optional
@@ -13,8 +12,8 @@ from .exceptions import ConfigurationError, DependencyError
 logger = logging.getLogger(__name__)
 
 
-async def main_async(config_path: Optional[str] = None) -> None:
-    """Main async entry point for the MCP server."""
+def main_sync(config_path: Optional[str] = None) -> None:
+    """Main synchronous entry point for the MCP server."""
     try:
         # Load configuration
         config_manager = ConfigManager(config_path)
@@ -29,7 +28,7 @@ async def main_async(config_path: Optional[str] = None) -> None:
 
         # Create and run server
         server = MCPServer(config)
-        await server.run()
+        server.run()
 
     except ConfigurationError as e:
         print(f"Configuration error: {e}", file=sys.stderr)
@@ -79,9 +78,9 @@ def main() -> None:
         else:
             config_path = sys.argv[1]
 
-    # Run the async main function
+    # Run the main function
     try:
-        asyncio.run(main_async(config_path))
+        main_sync(config_path)
     except KeyboardInterrupt:
         pass
 

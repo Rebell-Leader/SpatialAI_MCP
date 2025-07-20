@@ -166,7 +166,7 @@ class MCPServer:
             })
             return json.dumps(health_status, indent=2)
 
-    async def run(self) -> None:
+    def run(self) -> None:
         """Run the FastMCP server."""
         logger.info("Starting OpenProblems MCP Server with FastMCP")
 
@@ -181,8 +181,8 @@ class MCPServer:
         except Exception as e:
             logger.error(f"Initial health check failed: {e}")
 
-        # Run the FastMCP server
-        await self.mcp.run()
+        # Run the FastMCP server (this handles its own event loop)
+        self.mcp.run()
 
     def get_mcp_server(self) -> FastMCP:
         """Get the underlying FastMCP server instance."""
