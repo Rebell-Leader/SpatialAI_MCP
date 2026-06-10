@@ -18,7 +18,6 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Callable, List
 
-
 # ---------------------------------------------------------------------------
 # Shared data
 # ---------------------------------------------------------------------------
@@ -53,18 +52,21 @@ class Sources:
 
 def _mcp_json() -> str:
     """The standard JSON MCP config used by Claude Code and Cursor."""
-    return json.dumps(
-        {
-            "mcpServers": {
-                MCP_SERVER_NAME: {
-                    "command": MCP_COMMAND,
-                    "args": [],
-                    "env": {"OPENPROBLEMS_MCP_LOG_LEVEL": "INFO"},
+    return (
+        json.dumps(
+            {
+                "mcpServers": {
+                    MCP_SERVER_NAME: {
+                        "command": MCP_COMMAND,
+                        "args": [],
+                        "env": {"OPENPROBLEMS_MCP_LOG_LEVEL": "INFO"},
+                    }
                 }
-            }
-        },
-        indent=2,
-    ) + "\n"
+            },
+            indent=2,
+        )
+        + "\n"
+    )
 
 
 def _mcp_toml() -> str:
@@ -124,8 +126,7 @@ def install_codex(src: Sources, dest: Path, written: List[Path]) -> None:
         _copy_skill(skill, dest / ".codex" / "skills", written)
     _write(
         dest / ".codex" / "mcp-config.toml",
-        "# Append to ~/.codex/config.toml to register the MCP server.\n"
-        + _mcp_toml(),
+        "# Append to ~/.codex/config.toml to register the MCP server.\n" + _mcp_toml(),
         written,
     )
 
@@ -138,9 +139,7 @@ def install_cursor(src: Sources, dest: Path, written: List[Path]) -> None:
         "---\n"
         "description: OpenProblems spatial transcriptomics co-pilot — project rules\n"
         "alwaysApply: true\n"
-        "---\n\n"
-        + GENERATED_BANNER
-        + src.agents_md
+        "---\n\n" + GENERATED_BANNER + src.agents_md
     )
     _write(rules_dir / "openproblems.mdc", main_rule, written)
     # One on-demand rule per skill (description-gated, not always applied).
@@ -149,9 +148,7 @@ def install_cursor(src: Sources, dest: Path, written: List[Path]) -> None:
             "---\n"
             f"description: {skill.description}\n"
             "alwaysApply: false\n"
-            "---\n\n"
-            + GENERATED_BANNER
-            + skill.body
+            "---\n\n" + GENERATED_BANNER + skill.body
         )
         _write(rules_dir / f"{skill.name}.mdc", rule, written)
     _write(dest / ".cursor" / "mcp.json", _mcp_json(), written)
@@ -159,9 +156,7 @@ def install_cursor(src: Sources, dest: Path, written: List[Path]) -> None:
 
 def install_copilot(src: Sources, dest: Path, written: List[Path]) -> None:
     """GitHub Copilot: .github/copilot-instructions.md (self-contained)."""
-    skills_index = "\n".join(
-        f"- **{s.name}**: {s.description}" for s in src.skills
-    )
+    skills_index = "\n".join(f"- **{s.name}**: {s.description}" for s in src.skills)
     content = (
         GENERATED_BANNER
         + src.agents_md

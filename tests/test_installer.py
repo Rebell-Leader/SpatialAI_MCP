@@ -8,7 +8,6 @@ import pytest
 from installer.cli import _load_sources, _parse_skill, main
 from installer.targets import TARGETS
 
-
 REPO_ROOT = Path(__file__).resolve().parent.parent
 
 

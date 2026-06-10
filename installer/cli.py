@@ -15,7 +15,7 @@ import sys
 from pathlib import Path
 from typing import List
 
-from .targets import Skill, Sources, TARGETS
+from .targets import TARGETS, Skill, Sources
 
 
 def _find_repo_root(start: Path) -> Path:
