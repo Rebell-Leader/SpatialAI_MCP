@@ -35,6 +35,29 @@ python case-study/runner/run.py --config case-study/runner/arms.json
 
 Output: `case-study/runs/results.json` and `results.md`.
 
+## Smoke-test offline first (no tokens, no setup)
+
+Before spending real tokens, validate the whole prepare → run → grade → table
+pipeline with a fake agent:
+
+```bash
+python case-study/runner/run.py --config case-study/runner/arms.example.json \
+  --mock-harness skill-aware
+```
+
+`--mock-harness`:
+
+- **`skill-aware`** (recommended) — the fake agent writes the *good* reference
+  component when skill assets are present in the workdir, and the *bad* one
+  otherwise. So a full run reproduces the expected pattern (skill arms 11/11
+  PASS, no-skill arms 0/11 FAIL) — proving the install/strip, grading, and
+  reporting all work end-to-end.
+- **`good`** / **`bad`** — always produce that fixture, regardless of skill.
+
+If the configured `task_repo` doesn't exist, mock mode synthesizes a minimal
+stand-in repo automatically, so the smoke test needs nothing but this repo.
+Swap `--mock-harness ...` for the real run once it looks right.
+
 ## Harness setup
 
 The `command` templates in the config are substituted with `{prompt}` and

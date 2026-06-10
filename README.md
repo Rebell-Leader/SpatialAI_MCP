@@ -9,7 +9,7 @@ ships two complementary pieces:
    the Model Context Protocol so any MCP-capable agent can use them.
 2. **A provider-agnostic skill installer** (`installer/`) — author rules, skills,
    and domain context **once** (`AGENTS.md`, `skills/`, `context/`) and install
-   them into Claude Code, OpenAI Codex, Cursor, or GitHub Copilot.
+   them into Claude Code, OpenAI Codex, Cursor, GitHub Copilot, or Gemini CLI.
 
 ## 🎯 Purpose
 
@@ -99,11 +99,13 @@ graph TB
         Codex[OpenAI Codex]
         Cursor[Cursor]
         Copilot[GitHub Copilot]
+        Gemini[Gemini CLI]
     end
     Installer -->|CLAUDE.md, .claude/skills, .mcp.json| Claude
     Installer -->|AGENTS.md, .codex/skills| Codex
     Installer -->|.cursor/rules, .cursor/mcp.json| Cursor
     Installer -->|.github/copilot-instructions.md| Copilot
+    Installer -->|GEMINI.md, .gemini/settings.json| Gemini
 
     subgraph Server["MCP server (local process)"]
         MCP[FastMCP Server]
@@ -111,8 +113,8 @@ graph TB
         MCP --> Val
     end
     Claude -.->|MCP protocol| MCP
-    Codex -.->|MCP protocol| MCP
     Cursor -.->|MCP protocol| MCP
+    Gemini -.->|MCP protocol| MCP
 
     Val -.-> Data[(Spatial data:\nSpatialData/zarr, AnnData)]
 
@@ -240,7 +242,7 @@ You: "This nextflow run failed, why?"
 ### Local Development Setup
 
 ```bash
-git clone https://github.com/openproblems-bio/SpatialAI_MCP.git
+git clone https://github.com/Rebell-Leader/SpatialAI_MCP.git
 cd SpatialAI_MCP
 
 # Install in development mode
@@ -261,6 +263,8 @@ AGENTS.md                    # Canonical, provider-neutral agent rules (source o
 skills/                      # On-demand task playbooks (shared SKILL.md format)
 context/                     # OpenProblems facts, data-format & pipeline contracts
 installer/                   # Provider-agnostic skill installer (spatialai-install)
+case-study/                  # Runnable experiment: skill vs. plain agent (+ grader, runner)
+.claude-plugin/              # Plugin marketplace manifests (installable via /plugin)
 src/openproblems_mcp/        # The MCP server
 ├── server.py                #   FastMCP server core (tool/resource registration)
 ├── spatial_validation.py    #   SpatialData/zarr/AnnData validation
@@ -268,18 +272,13 @@ src/openproblems_mcp/        # The MCP server
 ├── spatial_tools.py         #   Tool wrappers exposed over MCP
 ├── tool_detection.py        #   Local tool detection
 ├── config.py / cli.py / main.py / exceptions.py
-tests/                       # pytest suite (server, validation, metadata, installer)
+tests/                       # pytest suite (server, validation, metadata, installer, case-study)
 ```
 
-Generated per-agent files (`CLAUDE.md`, `.claude/`, `.codex/`, `.cursor/`,
-`.github/copilot-instructions.md`, `.mcp.json`) are produced by the installer —
-edit `AGENTS.md` / `skills/` and re-run `spatialai-install`, not those files.
-
-## 📋 Requirements
-
-### System Requirements
-- Python 3.10 or higher (required by the `fastmcp` dependency)
-- Operating System: Linux, macOS, or Windows
+Generated per-agent files (`CLAUDE.md`, `GEMINI.md`, `.claude/`, `.codex/`,
+`.cursor/`, `.gemini/`, `.github/copilot-instructions.md`, `.mcp.json`) are
+produced by the installer — edit `AGENTS.md` / `skills/` and re-run
+`spatialai-install`, not those files.
 
 ## 🔬 Case study: does the skill close the model gap?
 
@@ -287,73 +286,82 @@ edit `AGENTS.md` / `skills/` and re-run `spatialai-install`, not those files.
 open-source model **with** this skill can match a frontier commercial model
 **without** it on a real `task_ist_preprocessing` task — at fewer agent steps and
 fewer human validations. It ships the frozen task, an objective rubric, an
-automated grader (`case-study/grade.py`), and reference components that bracket
-the rubric. See [`case-study/README.md`](case-study/README.md).
+automated grader (`case-study/grade.py`), reference components that bracket the
+rubric, and a [runner](case-study/runner/README.md) that drives Gemini CLI /
+opencode arms and grades them. Smoke-test the whole pipeline offline first:
 
-### Optional Tools (Auto-detected)
-- **Nextflow**: For pipeline execution
-- **Viash**: For component building and execution
-- **Docker**: For container operations
-- **Git**: For repository operations
-- **Python/Conda**: For environment management
+```bash
+python case-study/runner/run.py --config case-study/runner/arms.example.json \
+  --mock-harness skill-aware
+```
+
+See [`case-study/README.md`](case-study/README.md).
+
+## 📋 Requirements
+
+### System Requirements
+- Python 3.10 or higher (required by the `fastmcp` dependency)
+- Operating System: Linux, macOS, or Windows
+
+### Optional Tools (auto-detected by the server, not required)
+- **Nextflow / Viash / Docker**: for building and running pipelines yourself
+  (the agent drives these via the terminal; the server only detects them)
+- **Git**: for repository operations
+- **`[spatial]` extras** (`pip install -e ".[spatial]"`): spatialdata, zarr,
+  anndata, h5py — needed only for deep data-internals validation
 
 ## 🚦 Current Status
 
 ### ✅ Implemented
-- ✅ Clean Python package structure, pip-installable with CLI commands
-- ✅ FastMCP-based server architecture (stdio)
-- ✅ Logging, configuration management, local tool detection
-- ✅ Health monitoring and status reporting
-- ✅ Spatial data validation (SpatialData / zarr / AnnData) — kiro Task 2.1
-- ✅ Bioinformatics metadata extraction & workflow-config analysis — kiro Task 2.2
+- ✅ FastMCP-based MCP server (stdio), pip-installable with CLI commands
+- ✅ Spatial data validation (SpatialData / zarr / AnnData) + metadata/config analysis
+- ✅ Logging, configuration management, local tool detection, health monitoring
+- ✅ Provider-agnostic installer for **5 agents** (Claude, Codex, Cursor, Copilot, Gemini CLI)
+- ✅ Skills + context grounded in the current OpenProblems iST pipeline
+- ✅ Installable Claude Code plugin (`.claude-plugin/`)
+- ✅ Case-study harness with automated grader and offline mock mode
+- ✅ CI: tests on Python 3.10–3.12, generated-files-in-sync check, upstream-drift check
 
 ### 🚧 Roadmap (not yet implemented)
-- 🚧 Local bioinformatics tool execution: Nextflow / Viash / Docker — kiro Task 3
-- 🚧 Workflow state management & execution history — kiro Task 5
-- 🚧 OpenProblems ecosystem integration — kiro Task 5
-- 🚧 Provider-agnostic skill installer (Claude, Codex, Cursor, Copilot) — see `installer/`
+- 🚧 In-server pipeline **execution** (Nextflow / Viash / Docker) — kiro Task 3
+- 🚧 Workflow state management & execution history — kiro Task 4
+- 🚧 OpenProblems build / benchmark / submission tools — kiro Task 5
 
-See `.kiro/specs/production-mcp-server/tasks.md` for the full task board.
-
-## 🤝 Why FastMCP?
-
-FastMCP 2.0 provides:
-- **Minimal boilerplate**: Focus on functionality, not protocol details
-- **Production-ready**: Built for real-world deployment scenarios
-- **High performance**: Optimized for MCP protocol efficiency
-- **Pythonic**: Clean, intuitive API design
-- **Comprehensive**: Full MCP ecosystem support
-
-This implementation is significantly cleaner and more maintainable than raw MCP protocol implementations.
+Until those land, the agent drives your local `nextflow` / `viash` / `docker`
+CLIs directly. See `.kiro/specs/production-mcp-server/tasks.md` for the task board.
 
 ## 📚 Documentation
 
-- **Installation Guide**: See Quick Start section above
-- **API Reference**: Coming soon
-- **Continue.dev Integration**: See Integration section above
-- **Troubleshooting**: Use `openproblems-mcp check` for diagnostics
+- **Quickstart**: [QUICKSTART.md](QUICKSTART.md) — install to first result in ~5 min
+- **Agent rules (source of truth)**: [AGENTS.md](AGENTS.md)
+- **Installer & per-agent mapping**: [installer/README.md](installer/README.md)
+- **Domain context**: [context/](context/) (data formats, the iST pipeline)
+- **Case study**: [case-study/README.md](case-study/README.md)
+- **Troubleshooting**: run `openproblems-mcp check` for diagnostics
 
 ## 🤝 Contributing
 
-We welcome contributions! Please:
+Contributions welcome. Please:
 
-1. Focus on bioinformatics-specific functionality
-2. Avoid duplicating Continue.dev built-in tools
-3. Follow the FastMCP patterns established in the codebase
-4. Add tests for new functionality
+1. Edit the canonical assets (`AGENTS.md`, `skills/`, `context/`) — never the
+   generated per-agent files; re-run `spatialai-install` to regenerate them.
+2. Keep `README.md`, `AGENTS.md`, and the kiro task board honest about what is
+   actually implemented; don't advertise roadmap tools as available.
+3. Add tests for new functionality (`python -m pytest`).
 
 ## 📄 License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+This project is licensed under the MIT License — see the [LICENSE](LICENSE) file for details.
 
 ## 🙏 Acknowledgments
 
-- **OpenProblems Initiative**: For standardizing benchmarking in spatial biology
-- **FastMCP**: For providing an excellent MCP framework
-- **Continue.dev**: For creating a powerful AI coding assistant platform
+- **OpenProblems Initiative**: for standardizing benchmarking in spatial biology
+- **FastMCP**: for the MCP server framework
+- **The `AGENTS.md` standard** and the Claude/Codex/Cursor/Copilot/Gemini
+  ecosystems this co-pilot projects into
 
 ## 📞 Support
 
-- **GitHub Issues**: [Report bugs and request features](https://github.com/openproblems-bio/SpatialAI_MCP/issues)
-- **Health Check**: Run `openproblems-mcp check` for diagnostics
+- **GitHub Issues**: [Report bugs and request features](https://github.com/Rebell-Leader/SpatialAI_MCP/issues)
+- **Health Check**: run `openproblems-mcp check` for diagnostics
 - **OpenProblems**: [Learn about OpenProblems](https://openproblems.bio)

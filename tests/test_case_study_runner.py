@@ -1,6 +1,7 @@
 """Guard the case-study runner's wiring (no live agent needed)."""
 
 import importlib.util
+import json
 import sys
 from pathlib import Path
 
@@ -58,3 +59,51 @@ def test_render_table_has_rows():
     table = run_mod.render_table(results)
     assert "| Arm |" in table
     assert "X" in table and "11/11" in table
+
+
+def test_mock_harness_skill_aware(tmp_path):
+    # Skill present -> good component.
+    (tmp_path / "AGENTS.md").write_text("x", encoding="utf-8")
+    info = run_mod.mock_harness({"name": "c"}, tmp_path, "skill-aware")
+    assert info["produced"] == "good"
+    comp = run_mod.find_component(tmp_path, "log_normalization")
+    assert comp is not None
+    assert run_mod.grade_component(comp, REPO_ROOT, None)["score"] == 11
+
+
+def test_mock_harness_no_skill(tmp_path):
+    # No skill assets -> bad component.
+    info = run_mod.mock_harness({"name": "a"}, tmp_path, "skill-aware")
+    assert info["produced"] == "bad"
+    comp = run_mod.find_component(tmp_path, "log_normalization")
+    assert run_mod.grade_component(comp, REPO_ROOT, None)["score"] <= 3
+
+
+def test_mock_end_to_end(tmp_path):
+    """Full prepare->mock->grade pipeline reproduces the expected pass/fail split."""
+    config = {
+        "copilot_repo": str(REPO_ROOT),
+        "task_repo": str(tmp_path / "does_not_exist"),
+        "workdir": str(tmp_path / "runs"),
+        "arms": [
+            {
+                "name": "skill",
+                "harness": "gemini",
+                "model": "m",
+                "skill": True,
+                "agent_target": "gemini",
+            },
+            {"name": "noskill", "harness": "gemini", "model": "m", "skill": False},
+        ],
+        "harnesses": {"gemini": {"command": ["gemini", "-p", "{prompt}"]}},
+    }
+    cfg_path = tmp_path / "arms.json"
+    cfg_path.write_text(json.dumps(config), encoding="utf-8")
+
+    rc = run_mod.main(["--config", str(cfg_path), "--mock-harness", "skill-aware"])
+    assert rc == 0
+
+    results = json.loads((tmp_path / "runs" / "results.json").read_text())
+    by_arm = {r["arm"]: r["graded"]["score"] for r in results}
+    assert by_arm["skill"] == 11
+    assert by_arm["noskill"] == 0

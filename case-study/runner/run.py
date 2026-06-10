@@ -35,6 +35,14 @@ GRADE_PY = CASE_STUDY / "grade.py"
 STRIP_SH = CASE_STUDY / "scripts" / "strip_skill.sh"
 COPILOT_ASSETS = ("AGENTS.md", "skills", "context")
 
+# Where the mock harness drops the component it "produces".
+MOCK_COMPONENT_REL = Path("src") / "methods_normalization" / "log_normalization"
+# Fixtures the mock harness copies for a good vs. bad outcome.
+_FIXTURE = {
+    "good": CASE_STUDY / "examples" / "skill_guided",
+    "bad": CASE_STUDY / "examples" / "plain_agent_typical",
+}
+
 
 def _load_config(path: Path) -> dict:
     cfg = json.loads(path.read_text(encoding="utf-8"))
@@ -122,6 +130,32 @@ def run_harness(cfg: dict, arm: dict, workdir: Path, prompt: str) -> dict:
     }
 
 
+def mock_harness(arm: dict, workdir: Path, mode: str) -> dict:
+    """A fake agent for smoke-testing the pipeline without a real model.
+
+    Writes a known component into the workdir so prepare -> find -> grade can be
+    exercised offline. Modes:
+      * ``good`` / ``bad``  -> always produce that fixture
+      * ``skill-aware``     -> produce the good component when skill assets are
+        present in the workdir, else the bad one (so the full pipeline reproduces
+        the expected pass/fail pattern without burning tokens)
+    """
+    if mode == "skill-aware":
+        skill_present = (workdir / "AGENTS.md").exists() or (
+            workdir / "GEMINI.md"
+        ).exists()
+        quality = "good" if skill_present else "bad"
+    else:
+        quality = mode  # "good" or "bad"
+
+    dest = workdir / MOCK_COMPONENT_REL
+    dest.mkdir(parents=True, exist_ok=True)
+    for f in _FIXTURE[quality].iterdir():
+        if f.is_file():
+            shutil.copyfile(f, dest / f.name)
+    return {"ran": True, "mock": mode, "produced": quality, "returncode": 0}
+
+
 def find_component(workdir: Path, component_name: str) -> Path | None:
     """Find the produced component dir (a config.vsh.yaml named/located by name)."""
     best = None
@@ -148,7 +182,9 @@ def grade_component(
         return {"error": "grade.py failed", "stderr": proc.stderr, "score": 0}
 
 
-def run_arm(cfg: dict, arm: dict, copilot_repo: Path, dry_run: bool) -> dict:
+def run_arm(
+    cfg: dict, arm: dict, copilot_repo: Path, dry_run: bool, mock: str | None = None
+) -> dict:
     prompt = (copilot_repo / cfg["prompt_file"]).read_text(encoding="utf-8").strip()
     result = {
         "arm": arm["name"],
@@ -166,17 +202,24 @@ def run_arm(cfg: dict, arm: dict, copilot_repo: Path, dry_run: bool) -> dict:
         result["plan"] = {
             "workdir": str(Path(cfg["workdir"]) / arm["name"]),
             "prep": action,
-            "command": [
-                p.replace("{prompt}", "<PROMPT>").replace(
-                    "{model}", arm.get("model", "")
-                )
-                for p in cmd
-            ],
+            "command": (
+                f"<mock:{mock}>"
+                if mock
+                else [
+                    p.replace("{prompt}", "<PROMPT>").replace(
+                        "{model}", arm.get("model", "")
+                    )
+                    for p in cmd
+                ]
+            ),
         }
         return result
 
     workdir = prepare_workdir(cfg, arm, copilot_repo)
-    run_info = run_harness(cfg, arm, workdir, prompt)
+    if mock:
+        run_info = mock_harness(arm, workdir, mock)
+    else:
+        run_info = run_harness(cfg, arm, workdir, prompt)
     result["run"] = run_info
     component = find_component(workdir, cfg["component_name"])
     if component is None:
@@ -206,15 +249,49 @@ def render_table(results: list[dict]) -> str:
     return "\n".join(rows)
 
 
+def _synthesize_task_repo(path: Path) -> None:
+    """Create a minimal stand-in task repo so mock runs need no external clone."""
+    (path / "src" / "api").mkdir(parents=True, exist_ok=True)
+    (path / "src" / "methods_normalization").mkdir(parents=True, exist_ok=True)
+    (path / "_viash.yaml").write_text(
+        "name: task_ist_preprocessing\n", encoding="utf-8"
+    )
+    (path / "src" / "api" / "comp_normalization.yaml").write_text(
+        "# stub component API for the normalization stage\n", encoding="utf-8"
+    )
+    (path / "README.md").write_text("# (synthetic mock task repo)\n", encoding="utf-8")
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--config", type=Path, required=True)
     parser.add_argument("--only", action="append", help="Run only these arm name(s).")
     parser.add_argument("--dry-run", action="store_true", help="Plan without running.")
+    parser.add_argument(
+        "--mock-harness",
+        choices=["skill-aware", "good", "bad"],
+        metavar="MODE",
+        help="Use a fake agent instead of a real CLI (smoke test). "
+        "'skill-aware' produces a good component when skill assets are present, "
+        "else a bad one.",
+    )
     args = parser.parse_args(argv)
 
     cfg = _load_config(args.config)
     copilot_repo = Path(cfg.get("copilot_repo", ".")).resolve()
+
+    # In mock mode, synthesize a stand-in task repo if the configured one is absent
+    # so the full prepare->run->grade pipeline runs with no external dependencies.
+    if args.mock_harness and not args.dry_run:
+        task_repo = Path(cfg["task_repo"]).expanduser()
+        if not task_repo.exists():
+            synth = Path(cfg["workdir"]).resolve() / "_mock_task_repo"
+            if synth.exists():
+                shutil.rmtree(synth)
+            _synthesize_task_repo(synth)
+            cfg["task_repo"] = str(synth)
+            print(f"(mock) synthesized stand-in task repo at {synth}")
+
     arms = cfg["arms"]
     if args.only:
         arms = [a for a in arms if a["name"] in set(args.only)]
@@ -222,7 +299,9 @@ def main(argv: list[str] | None = None) -> int:
             print(f"❌ no arms match {args.only}", file=sys.stderr)
             return 2
 
-    results = [run_arm(cfg, arm, copilot_repo, args.dry_run) for arm in arms]
+    results = [
+        run_arm(cfg, arm, copilot_repo, args.dry_run, args.mock_harness) for arm in arms
+    ]
 
     if args.dry_run:
         print(json.dumps(results, indent=2))
