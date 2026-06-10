@@ -1,129 +1,81 @@
 # Testing Guide
 
-This document explains how to run the test suite for the OpenProblems MCP Spatial Tools.
+How to run and extend the test suite. Configuration lives in `pyproject.toml`
+under `[tool.pytest.ini_options]` (there is no `pytest.ini` or `setup.py`); it
+sets `pythonpath = ["src"]`, so no manual path juggling is needed.
 
-## Quick Start
+## Setup
 
-### 1. Verify Test Setup
 ```bash
-python verify_tests.py
+pip install -e ".[dev]"          # pytest, pytest-mock, ruff, black, mypy
+pip install -e ".[spatial]"      # optional: spatialdata, zarr, anndata, h5py
 ```
 
-### 2. Run All Tests
+The suite is designed to run **without** the heavy `[spatial]` stack — validators
+degrade to lightweight structural checks and tests use mocking where needed.
+
+## Run the tests
+
 ```bash
-python run_tests.py
+python -m pytest                 # everything
+python -m pytest -q              # quiet
+python -m pytest tests/test_installer.py        # one file
+python -m pytest -k validation                  # by keyword
 ```
 
-### 3. Run Specific Test Categories
+## What's covered
+
+| File | Area |
+| --- | --- |
+| `tests/test_spatial_validation.py` | `SpatialDataValidator` (format detection, integrity, levels) |
+| `tests/test_metadata_analysis.py` | `BioinformaticsMetadataExtractor` |
+| `tests/test_spatial_tools.py` | MCP tool interface (`SpatialMCPTools`) |
+| `tests/test_fastmcp_server.py` | FastMCP server wiring |
+| `tests/test_installer.py` | Provider-agnostic installer (every target + CLI) |
+| `tests/test_plugin_manifest.py` | Claude Code plugin marketplace manifests |
+| `tests/test_case_study.py` | Case-study grader (rubric discrimination) |
+| `tests/test_case_study_runner.py` | Case-study runner (dry-run, mock harness, grading) |
+| `tests/conftest.py` | Shared fixtures |
+
+## Lint, format, type-check
+
 ```bash
-# Quick development tests
-python tests/test_runner.py --quick
-
-# Integration tests only
-python tests/test_runner.py --integration
-
-# All tests
-python tests/test_runner.py --all
+ruff check installer/ src/
+black --check installer/
+mypy src/
 ```
 
-## Alternative Test Methods
+The MCP server (`src/`) carries some pre-existing line-length debt; CI lints it
+**report-only**. New code under `installer/` and the case-study tooling is held
+to a clean bar (CI fails on violations there).
 
-### Using pytest directly
+## CI (GitHub Actions, `.github/workflows/ci.yml`)
+
+On every push/PR:
+
+1. **Tests** on Python 3.10, 3.11, 3.12.
+2. **Generated-files-in-sync** — re-runs `spatialai-install install --target all`
+   and fails if the committed per-agent files drift from `AGENTS.md` + `skills/`.
+   So after editing those, regenerate and commit, or CI will flag it.
+3. **Lint** — strict on new code, report-only on legacy `src/`.
+
+Weekly (scheduled): an **upstream-drift** check comparing our `context/`
+assumptions to the live `task_ist_preprocessing` repo (report-only).
+
+## Smoke-testing the case study offline
+
+The case-study runner has a no-tokens mock mode that exercises the full
+prepare → run → grade → table pipeline:
+
 ```bash
-# Run all tests (pytest.ini handles the configuration)
-pytest tests/ -v
-
-# Run specific test file
-pytest tests/test_spatial_validation.py -v
-
-# Run simple test to verify setup
-pytest test_simple.py -v
-
-# Run with coverage (if coverage is installed)
-pytest tests/ --cov=openproblems_mcp --cov-report=html
+python case-study/runner/run.py --config case-study/runner/arms.example.json \
+  --mock-harness skill-aware
 ```
 
-### Using the standalone test script
-```bash
-python test_spatial_tools.py
-```
+## Adding tests
 
-## Test Structure
-
-- **`tests/test_spatial_validation.py`** - Tests for SpatialDataValidator
-- **`tests/test_metadata_analysis.py`** - Tests for BioinformaticsMetadataExtractor
-- **`tests/test_spatial_tools.py`** - Tests for SpatialMCPTools (MCP interface)
-- **`tests/conftest.py`** - Pytest fixtures and configuration
-- **`tests/test_runner.py`** - Custom test runner with different modes
-
-## Troubleshooting
-
-### Import Errors
-If you get `ModuleNotFoundError: No module named 'openproblems_mcp'`:
-
-1. First try the simple test:
-   ```bash
-   python test_simple.py
-   ```
-
-2. Use the provided test runners that handle paths automatically:
-   ```bash
-   python run_tests.py
-   python verify_tests.py
-   ```
-
-3. If needed, install in development mode:
-   ```bash
-   pip install -e .
-   ```
-
-### Missing Dependencies
-The tests are designed to work without heavy bioinformatics dependencies (spatialdata, zarr, anndata). They use mocking to simulate these libraries.
-
-Required for testing:
-```bash
-pip install pytest pytest-mock
-```
-
-### Path Issues
-The test runners automatically set up the Python path. If you're having issues:
-
-1. Run from the project root directory
-2. Use the provided test runners instead of calling pytest directly
-3. Check that `src/openproblems_mcp/__init__.py` exists
-
-## Test Coverage
-
-The test suite covers:
-
-- ✅ All validation methods and levels
-- ✅ All metadata extraction functionality
-- ✅ All MCP tool interfaces
-- ✅ Error handling and edge cases
-- ✅ File format detection
-- ✅ Result formatting
-- ✅ Integration workflows
-
-## Development Workflow
-
-1. **Before making changes**: Run `python verify_tests.py`
-2. **During development**: Run `python tests/test_runner.py --quick`
-3. **Before committing**: Run `python run_tests.py`
-4. **For CI/CD**: Use `pytest tests/ -v --tb=short`
-
-## Adding New Tests
-
-When adding new functionality:
-
-1. Add unit tests to the appropriate test file
-2. Add integration tests for complete workflows
-3. Update fixtures in `conftest.py` if needed
-4. Run the full test suite to ensure nothing breaks
-
-## Performance
-
-The test suite is optimized for speed:
-- Uses mocking to avoid expensive operations
-- Creates minimal test data
-- Focuses on logic rather than data processing
-- Typical run time: < 30 seconds for full suite
+1. Put new tests in `tests/test_*.py` with `test_*` functions.
+2. Prefer lightweight checks; mock heavy I/O rather than requiring `[spatial]`.
+3. If you change `AGENTS.md` or `skills/`, re-run the installer so the in-sync
+   CI job stays green.
+4. Run `python -m pytest` before committing.
