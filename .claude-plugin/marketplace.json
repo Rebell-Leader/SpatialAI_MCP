@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-marketplace.json",
+  "name": "openproblems-spatial",
+  "owner": {
+    "name": "OpenProblems Spatial Co-pilot",
+    "url": "https://github.com/Rebell-Leader/SpatialAI_MCP"
+  },
+  "metadata": {
+    "description": "Provider-agnostic co-pilot for OpenProblems spatial transcriptomics: domain skills and an MCP validation server.",
+    "version": "0.1.0"
+  },
+  "plugins": [
+    {
+      "name": "openproblems-spatial",
+      "source": "./",
+      "description": "Spatial transcriptomics skills (data validation, Viash component authoring, Nextflow debugging, OpenProblems submission) plus an MCP server that validates SpatialData/zarr/AnnData and analyzes Viash/Nextflow configs. Skills auto-discover from skills/; the MCP server is declared in .mcp.json.",
+      "version": "0.1.0",
+      "category": "data-science",
+      "keywords": [
+        "spatial-transcriptomics",
+        "bioinformatics",
+        "openproblems",
+        "viash",
+        "nextflow"
+      ]
+    }
+  ]
+}

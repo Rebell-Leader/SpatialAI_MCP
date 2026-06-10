@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-plugin-manifest.json",
+  "name": "openproblems-spatial",
+  "displayName": "OpenProblems Spatial Co-pilot",
+  "version": "0.1.0",
+  "description": "Domain skills + MCP validation tools for OpenProblems spatial transcriptomics benchmarks (SpatialData/zarr, Viash, the iST preprocessing pipeline).",
+  "author": {
+    "name": "OpenProblems Spatial Co-pilot contributors",
+    "url": "https://github.com/Rebell-Leader/SpatialAI_MCP"
+  },
+  "homepage": "https://github.com/Rebell-Leader/SpatialAI_MCP",
+  "repository": "https://github.com/Rebell-Leader/SpatialAI_MCP",
+  "license": "MIT",
+  "keywords": [
+    "spatial-transcriptomics",
+    "bioinformatics",
+    "openproblems",
+    "viash",
+    "nextflow",
+    "spatialdata",
+    "mcp"
+  ]
+}

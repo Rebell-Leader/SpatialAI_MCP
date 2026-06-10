@@ -70,8 +70,11 @@ class ValidationResult:
 class SpatialDataValidator:
     """Validator for spatial transcriptomics data formats."""
 
-    # File extensions for different formats
-    SPATIALDATA_EXTENSIONS = {'.zarr', '.spatialdata'}
+    # File extensions for different formats.
+    # Note: '.zarr' is deliberately NOT here. A zarr store is only classified as
+    # SpatialData after inspecting its contents (see _detect_format /
+    # _is_spatialdata_zarr); the unconditional '.spatialdata' suffix is.
+    SPATIALDATA_EXTENSIONS = {'.spatialdata'}
     ZARR_EXTENSIONS = {'.zarr'}
     ANNDATA_EXTENSIONS = {'.h5ad', '.h5', '.hdf5'}
 

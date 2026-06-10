@@ -1,0 +1,102 @@
+name: CI
+
+on:
+  push:
+    branches: [main, "claude/**"]
+  pull_request:
+  workflow_dispatch:
+  schedule:
+    # Weekly drift check against the upstream OpenProblems repo (Mondays 06:00 UTC).
+    - cron: "0 6 * * 1"
+
+jobs:
+  test:
+    name: Test (py${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.11", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install package (with dev extras)
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
+
+      - name: Run test suite
+        run: python -m pytest -q
+
+  installer-in-sync:
+    name: Generated agent files are in sync
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install package
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e .
+
+      - name: Re-run the installer and fail if anything changed
+        run: |
+          spatialai-install install --target all --dest .
+          if ! git diff --quiet; then
+            echo "::error::Generated agent files are out of date."
+            echo "Run 'spatialai-install install --target all --dest .' and commit the result."
+            git --no-pager diff --stat
+            exit 1
+          fi
+          echo "Generated agent files are in sync with AGENTS.md + skills/."
+
+  lint:
+    name: Lint (non-blocking on legacy debt)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dev tools
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
+
+      # New, provider-agnostic code is held to a clean bar.
+      - name: Lint installer/ strictly
+        run: |
+          ruff check installer/ tests/test_installer.py
+          black --check installer/ tests/test_installer.py
+
+      # The MCP server has pre-existing lint debt; report but don't block.
+      - name: Lint src/ (report only)
+        continue-on-error: true
+        run: ruff check src/
+
+  upstream-sync:
+    name: OpenProblems upstream drift (report-only)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      # Compares our context/ pipeline assumptions to the live task repo.
+      # Report-only so it never blocks pushes; the scheduled run surfaces drift.
+      - name: Check upstream layout
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: python scripts/check_upstream_sync.py

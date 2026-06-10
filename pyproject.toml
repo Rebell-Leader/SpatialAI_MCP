@@ -7,7 +7,7 @@ name = "openproblems-spatial-mcp"
 version = "0.1.0"
 description = "Production-ready MCP server for OpenProblems spatial transcriptomics workflows"
 readme = "README.md"
-requires-python = ">=3.8"
+requires-python = ">=3.10"
 license = {text = "MIT"}
 authors = [
     {name = "OpenProblems MCP Contributors", email = "info@openproblems.bio"},
@@ -26,8 +26,6 @@ classifiers = [
     "Intended Audience :: Science/Research",
     "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.8",
-    "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
@@ -47,14 +45,24 @@ dependencies = [
 dev = [
     "pytest>=7.0.0",
     "pytest-asyncio>=0.21.0",
+    "pytest-mock>=3.10.0",
     "black>=23.0.0",
     "ruff>=0.1.0",
     "mypy>=1.0.0",
+]
+# Optional heavy scientific stack, only needed for deep spatial-data inspection.
+# The server degrades gracefully to lightweight structural checks when absent.
+spatial = [
+    "spatialdata",
+    "zarr",
+    "anndata",
+    "h5py",
 ]
 
 [project.scripts]
 openproblems-mcp = "openproblems_mcp.cli:main"
 openproblems-mcp-server = "openproblems_mcp.main:main"
+spatialai-install = "installer.cli:main"
 
 [project.urls]
 Homepage = "https://github.com/openproblems-bio/SpatialAI_MCP"
@@ -62,20 +70,26 @@ Documentation = "https://github.com/openproblems-bio/SpatialAI_MCP/docs"
 Repository = "https://github.com/openproblems-bio/SpatialAI_MCP"
 Issues = "https://github.com/openproblems-bio/SpatialAI_MCP/issues"
 
-[tool.setuptools.packages.find]
-where = ["src"]
+[tool.setuptools]
+packages = ["openproblems_mcp", "installer"]
+
+[tool.setuptools.package-dir]
+openproblems_mcp = "src/openproblems_mcp"
+installer = "installer"
 
 [tool.black]
 line-length = 88
-target-version = ['py38']
+target-version = ['py310']
 
 [tool.ruff]
 line-length = 88
-target-version = "py38"
+target-version = "py310"
+
+[tool.ruff.lint]
 select = ["E", "F", "I", "N", "W"]
 
 [tool.mypy]
-python_version = "3.8"
+python_version = "3.10"
 warn_return_any = true
 warn_unused_configs = true
 disallow_untyped_defs = true
@@ -83,8 +97,13 @@ no_implicit_optional = true
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+pythonpath = ["src"]
 python_files = ["test_*.py"]
 python_classes = ["Test*"]
 python_functions = ["test_*"]
 addopts = "-v --tb=short"
 asyncio_mode = "auto"
+filterwarnings = [
+    "ignore::pytest.PytestConfigWarning",
+    "ignore::pytest.PytestUnknownMarkWarning",
+]
