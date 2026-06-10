@@ -59,13 +59,23 @@ CLIs directly via the terminal instead, and say so plainly.
 
 ## Coding standards
 
-- **Python**: target 3.8+, format with `black` (line length 88), lint with
-  `ruff`, type-check with `mypy`. Match existing module style.
-- **Viash scripts**: keep the `## VIASH START` / `## VIASH END` parameter block,
-  use `SpatialData` objects for I/O, handle coordinate systems explicitly, fail
-  loudly with a non-zero exit on error.
-- **Reproducibility**: pin package versions, prefer the project's existing
-  dependency mechanism, document parameters with biological rationale.
+- **Python**: target 3.10+ (the `fastmcp` dependency requires ≥3.10), format with
+  `black` (line length 88), lint with `ruff`, type-check with `mypy`. Match
+  existing module style.
+- **Viash components (OpenProblems conventions)**: use the modern flat config
+  (top-level `name`, `arguments`, `resources`, `engines`, `runners`) — not the
+  legacy `functionality:` / `platforms:` blocks. Conform to the task's component
+  API via `__merge__: /src/api/comp_<stage>.yaml`. Build on the shared base
+  images (e.g. `openproblems/base_python:1`) with `__merge__`-ed setup partials,
+  not raw `python:*` images. Include the standard metadata (`label`, `summary`,
+  `description`, `links`, `references`). In scripts, keep the
+  `## VIASH START` / `## VIASH END` block, use `SpatialData` objects for I/O,
+  handle coordinate systems explicitly, and fail loudly with a non-zero exit.
+- **Reproducibility & verification**: pin package versions and base-image tags
+  (no unpinned `latest`); add a `viash test` unit test (`test_resources`) per
+  component; document parameters with biological rationale. See
+  `skills/viash-component-authoring/SKILL.md` and
+  `skills/openproblems-submission/SKILL.md`.
 
 ## Working in this repo
 

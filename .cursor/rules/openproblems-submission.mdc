@@ -25,13 +25,18 @@ test profile, and is reproducible — ready for a PR.
    elements the stage needs are present (`check_spatial_data_compatibility` for
    multi-file). State raw-vs-normalized expectations explicitly.
 
-4. **Reproducibility.** Pin the engine image and package versions in the config.
-   No unpinned `latest`. Document every parameter with a default and biological
-   rationale.
+4. **Reproducibility.** Build on the shared base images
+   (`openproblems/base_python:1` / `base_r:1`) with `__merge__`-ed setup
+   partials rather than raw `python:*`/`r-base` images. Pin base-image tags and
+   package versions — no unpinned `latest`. Provide the standard metadata
+   (`label`, `summary`, `description`, `links`, `references`/doi) and document
+   every parameter with a default and biological rationale.
 
 5. **Build & test locally** (server doesn't run these — use the terminal):
    - `viash ns build`
    - `viash run config.vsh.yaml -- --input <test>.zarr --output tmp/out.zarr`
+   - `viash test config.vsh.yaml` — a unit test (`test_resources`) is expected
+     for every component
    - `nextflow run main.nf -profile test,docker`
 
 6. **Dependency sanity.** Run `analyze_workflow_dependencies` across the workflow

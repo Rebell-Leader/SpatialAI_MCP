@@ -18,43 +18,54 @@ Nextflow module.
    right interface for the pipeline stage you're implementing (see
    `context/ist-preprocessing-pipeline.md`) and match its inputs/outputs exactly.
 
-2. **Write `config.vsh.yaml`.** Minimal, validated arguments; clear biological
-   descriptions; pin the engine (Docker image + setup packages). Example shape:
+2. **Write `config.vsh.yaml`.** Use the modern **flat** config (no
+   `functionality:` wrapper) with `engines:` / `runners:` (not the legacy
+   `platforms:`). Follow OpenProblems conventions: merge the stage API, build on
+   the shared base image with a setup partial, include the standard metadata
+   block, and label the nextflow runner with resource directives. This mirrors a
+   real `task_ist_preprocessing` component:
 
    ```yaml
+   __merge__: /src/api/comp_<stage>.yaml
+
    name: my_method
-   namespace: <stage>
-   description: "One-line biological purpose."
+   label: "My Method"
+   summary: "One-line biological purpose."
+   description: "Longer description with method context."
+   links:
+     documentation: "https://github.com/openproblems-bio/task_ist_preprocessing"
+     repository: "https://github.com/openproblems-bio/task_ist_preprocessing"
+   references:
+     doi: "10.xxxx/xxxxx"        # the method's paper
+
    arguments:
-     - name: "--input"
-       type: file
-       required: true
-       description: "Input SpatialData (zarr)."
-     - name: "--output"
-       type: file
-       direction: output
-       required: true
      - name: "--some_param"
        type: double
        default: 1.0
        description: "Biologically meaningful parameter."
+   # Note: --input/--output are usually inherited from the merged comp_<stage> API.
+
    resources:
      - type: python_script
        path: script.py
+
    engines:
      - type: docker
-       image: python:3.11
-       setup:
-         - type: python
-           packages: [spatialdata, scanpy, anndata]
+       image: openproblems/base_python:1        # shared base, not raw python:*
+       __merge__:
+         - /src/base/setup_spatialdata_partial.yaml   # extra deps via setup partial
+     - type: native
+
    runners:
      - type: executable
      - type: nextflow
-   __merge__: /src/api/comp_<stage>.yaml
+       directives:
+         label: [ midtime, lowcpu, lowmem ]     # resource labels
    ```
 
-   (Confirm the exact `__merge__` path and current Viash schema against the live
-   repo; Viash config keys evolve between major versions.)
+   Confirm the exact `__merge__` paths (the stage API and the base setup partial)
+   and the current Viash schema against the live repo before building — keys
+   evolve between major Viash versions.
 
 3. **Write the script** with the dev parameter block:
 
@@ -78,6 +89,8 @@ Nextflow module.
 5. **Build & test** with the user's local Viash (the server does not run it):
    - `viash ns build`
    - `viash run config.vsh.yaml -- --input <test>.zarr --output tmp/out.zarr`
+   - unit test: add a `test_resources` script (e.g. `test.py`) to the config and
+     run `viash test config.vsh.yaml` — every OpenProblems component ships a test.
    - integration: `nextflow run main.nf -profile test,docker`
 
 ## Don't
