@@ -1,4 +1,5 @@
 {
+  "_comment": "Copy to arms.json and edit. REQUIRED: set 'task_repo' to a local clone of openproblems-bio/task_ist_preprocessing (or use --mock-harness to smoke-test offline). Relative paths resolve against the repo root, so the runner works from any directory.",
   "copilot_repo": ".",
   "task_repo": "/path/to/task_ist_preprocessing",
   "component_name": "log_normalization",

@@ -107,3 +107,30 @@ def test_mock_end_to_end(tmp_path):
     by_arm = {r["arm"]: r["graded"]["score"] for r in results}
     assert by_arm["skill"] == 11
     assert by_arm["noskill"] == 0
+
+
+def test_config_paths_are_cwd_independent(tmp_path, monkeypatch):
+    """Paths resolve against the repo root, not the current working directory."""
+    monkeypatch.chdir(tmp_path)  # run from an unrelated directory
+    cfg = run_mod._load_config(EXAMPLE_CONFIG)
+    prompt = Path(cfg["prompt_file"])
+    assert prompt.is_absolute() and prompt.is_file()
+    assert prompt == REPO_ROOT / "case-study" / "task" / "prompt.txt"
+    assert Path(cfg["copilot_repo"]) == REPO_ROOT
+    assert Path(cfg["workdir"]).is_absolute()
+
+
+def test_real_run_rejects_placeholder_task_repo(tmp_path, capsys):
+    """A real run with the unedited placeholder fails clearly (exit 2)."""
+    config = {
+        "copilot_repo": str(REPO_ROOT),
+        "task_repo": "/path/to/task_ist_preprocessing",
+        "workdir": str(tmp_path / "runs"),
+        "arms": [{"name": "x", "harness": "gemini", "model": "m", "skill": False}],
+        "harnesses": {"gemini": {"command": ["gemini", "-p", "{prompt}"]}},
+    }
+    cfg_path = tmp_path / "arms.json"
+    cfg_path.write_text(json.dumps(config), encoding="utf-8")
+    rc = run_mod.main(["--config", str(cfg_path)])
+    assert rc == 2
+    assert "task_repo" in capsys.readouterr().err
