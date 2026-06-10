@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "openproblems-spatial": {
+      "command": "openproblems-mcp-server",
+      "args": [],
+      "env": {
+        "OPENPROBLEMS_MCP_LOG_LEVEL": "INFO"
+      }
+    }
+  }
+}

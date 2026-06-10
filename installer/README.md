@@ -38,15 +38,17 @@ console script.
 | `codex` (OpenAI Codex) | `AGENTS.md` (read natively), `.codex/skills/<name>/SKILL.md`, `.codex/mcp-config.toml` snippet |
 | `cursor` (Cursor) | `.cursor/rules/openproblems.mdc` (always-applied, embeds `AGENTS.md`), `.cursor/rules/<skill>.mdc` (description-gated), `.cursor/mcp.json` |
 | `copilot` (GitHub Copilot) | `.github/copilot-instructions.md` (self-contained) |
+| `gemini` (Gemini CLI) | `GEMINI.md` (self-contained context file) + `.gemini/settings.json` (mcpServers) |
 
 Claude Code and Codex support importing/native-reading `AGENTS.md`, so they get a
-thin pointer. Cursor and Copilot have no import mechanism, so the installer
-embeds the full `AGENTS.md` content into their files to keep them self-contained.
+thin pointer. Cursor, Copilot, and Gemini CLI have no `@import` mechanism, so the
+installer embeds the full `AGENTS.md` content into their files to keep them
+self-contained.
 
 ## Design notes
 
 - Stdlib only — no third-party dependency, so the installer runs anywhere Python
-  3.8+ does. SKILL.md frontmatter is parsed without a YAML library.
+  3.10+ does. SKILL.md frontmatter is parsed without a YAML library.
 - Adding a skill = add `skills/<name>/SKILL.md` with `name`/`description`
   frontmatter, then re-run the installer; every target picks it up automatically.
 - Adding a target = add one `install_*` function and a `Target` entry in

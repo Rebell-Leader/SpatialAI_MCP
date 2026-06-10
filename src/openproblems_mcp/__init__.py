@@ -1,7 +1,8 @@
 """OpenProblems Spatial Transcriptomics MCP Server.
 
-A production-ready Model Context Protocol server for spatial transcriptomics
-workflows, designed to work seamlessly with Continue.dev and VSCode.
+A Model Context Protocol server providing domain-aware validation and analysis
+tools for spatial transcriptomics workflows. Provider-neutral: usable from any
+MCP-capable agent (Claude Code, Codex, Cursor, Copilot, Gemini CLI, ...).
 """
 
 __version__ = "0.1.0"

@@ -74,10 +74,13 @@ jobs:
           pip install -e ".[dev]"
 
       # New, provider-agnostic code is held to a clean bar.
-      - name: Lint installer/ strictly
+      # (case-study/examples/ are intentionally-imperfect fixtures — excluded.)
+      - name: Lint installer/ and case-study tooling strictly
         run: |
-          ruff check installer/ tests/test_installer.py
-          black --check installer/ tests/test_installer.py
+          ruff check installer/ case-study/grade.py case-study/runner/run.py \
+            tests/test_installer.py
+          black --check installer/ case-study/grade.py case-study/runner/run.py \
+            tests/test_installer.py
 
       # The MCP server has pre-existing lint debt; report but don't block.
       - name: Lint src/ (report only)
