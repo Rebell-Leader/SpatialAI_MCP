@@ -1,0 +1,46 @@
+{
+  "copilot_repo": ".",
+  "task_repo": "/path/to/task_ist_preprocessing",
+  "component_name": "log_normalization",
+  "workdir": "case-study/runs",
+  "prompt_file": "case-study/task/prompt.txt",
+  "timeout_seconds": 1800,
+  "harnesses": {
+    "gemini": {
+      "command": ["gemini", "-y", "-p", "{prompt}"],
+      "comment": "Headless Gemini CLI; -y auto-approves tool calls, -p is the prompt."
+    },
+    "opencode": {
+      "command": ["opencode", "run", "{prompt}", "--model", "{model}"],
+      "comment": "Non-interactive opencode; --model takes e.g. openrouter/qwen/qwen3-coder."
+    }
+  },
+  "arms": [
+    {
+      "name": "A_gemini_noskill",
+      "harness": "gemini",
+      "model": "gemini-2.5-pro",
+      "skill": false
+    },
+    {
+      "name": "C_gemini_skill",
+      "harness": "gemini",
+      "model": "gemini-2.5-pro",
+      "skill": true,
+      "agent_target": "gemini"
+    },
+    {
+      "name": "B_opencode_oss_noskill",
+      "harness": "opencode",
+      "model": "openrouter/qwen/qwen3-coder",
+      "skill": false
+    },
+    {
+      "name": "C_opencode_oss_skill",
+      "harness": "opencode",
+      "model": "openrouter/qwen/qwen3-coder",
+      "skill": true,
+      "agent_target": "codex"
+    }
+  ]
+}

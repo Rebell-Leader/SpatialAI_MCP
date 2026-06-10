@@ -38,7 +38,7 @@ Install the rules, skills, and MCP config into whichever agent you use:
 
 ```bash
 spatialai-install list                       # see targets and skills
-spatialai-install install --target claude    # or codex / cursor / copilot / all
+spatialai-install install --target claude    # or codex / cursor / copilot / gemini / all
 ```
 
 This generates the right files for that agent (e.g. `CLAUDE.md` + `.claude/skills/`

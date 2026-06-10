@@ -7,9 +7,9 @@ DEST="${1:?usage: strip_skill.sh <checkout_dir>}"
 cd "$DEST"
 
 rm -rf \
-  AGENTS.md CLAUDE.md QUICKSTART.md \
+  AGENTS.md CLAUDE.md GEMINI.md QUICKSTART.md \
   skills/ context/ installer/ \
-  .claude/ .codex/ .cursor/ .claude-plugin/ \
+  .claude/ .codex/ .cursor/ .gemini/ .claude-plugin/ \
   .github/copilot-instructions.md \
   .mcp.json
 

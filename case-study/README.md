@@ -103,24 +103,33 @@ measures whether that knowledge transfer actually closes the model gap.
 
 ## How to run
 
+### Automated (recommended): the runner
+
+[`runner/`](runner/) drives every arm end-to-end — prepare checkout, install or
+strip the skill, run the agent headless on the frozen prompt, grade the output —
+and writes a results table. It ships adapters for **Gemini CLI** and **opencode**
+(OpenRouter models). See [`runner/README.md`](runner/README.md).
+
 ```bash
-# 0. Install the package and a Viash/Docker toolchain on the runner.
 pip install -e ".[dev]"
+cp runner/arms.example.json runner/arms.json   # set task_repo + models
+python runner/run.py --config runner/arms.json --dry-run     # check the plan
+python runner/run.py --config runner/arms.json               # run + grade all arms
+```
 
-# 1. For each arm, prepare a checkout:
-#    - skill arms (C, D): spatialai-install install --target <agent>
-#    - no-skill arms (A, B): bash case-study/scripts/strip_skill.sh <checkout>
+It measures the **zero-intervention** scenario (one prompt, no help). For the
+**human-validations** metric, run the same arms interactively and log each
+operator correction by hand.
 
-# 2. Give the agent the frozen prompt (task/USER_PROMPT.md) in task/SETUP.md's
-#    environment. Log every turn and every human intervention.
+### Manual (for the interactive / human-validation runs)
 
-# 3. Grade the produced component directory:
+```bash
+# skill arms:    spatialai-install install --target <agent> --dest <checkout>
+# no-skill arms: bash case-study/scripts/strip_skill.sh <checkout>
+# give the agent task/prompt.txt; log every turn and intervention; then:
 python case-study/grade.py path/to/produced/component --json
-
-# 4. Record build/test:
 ( cd <task_repo> && viash ns build && viash test path/to/config.vsh.yaml )
-
-# 5. Fill results/RESULTS.md with the numbers from each arm.
+# fill results/RESULTS.md
 ```
 
 The grader is demonstrated on two reference components in `examples/`:

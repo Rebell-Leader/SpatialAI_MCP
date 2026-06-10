@@ -167,6 +167,22 @@ def install_copilot(src: Sources, dest: Path, written: List[Path]) -> None:
     _write(dest / ".github" / "copilot-instructions.md", content, written)
 
 
+def install_gemini(src: Sources, dest: Path, written: List[Path]) -> None:
+    """Gemini CLI: GEMINI.md context file (self-contained) + .gemini/settings.json."""
+    skills_index = "\n".join(f"- **{s.name}**: {s.description}" for s in src.skills)
+    gemini_md = (
+        GENERATED_BANNER
+        + src.agents_md
+        + "\n\n## Skill playbooks (in `skills/`)\n\n"
+        + skills_index
+        + "\n"
+    )
+    _write(dest / "GEMINI.md", gemini_md, written)
+    # Gemini CLI reads MCP servers from .gemini/settings.json; the top-level
+    # mcpServers shape matches the standard JSON config we emit elsewhere.
+    _write(dest / ".gemini" / "settings.json", _mcp_json(), written)
+
+
 @dataclass
 class Target:
     key: str
@@ -179,4 +195,5 @@ TARGETS = {
     "codex": Target("codex", "OpenAI Codex", install_codex),
     "cursor": Target("cursor", "Cursor", install_cursor),
     "copilot": Target("copilot", "GitHub Copilot", install_copilot),
+    "gemini": Target("gemini", "Gemini CLI", install_gemini),
 }
