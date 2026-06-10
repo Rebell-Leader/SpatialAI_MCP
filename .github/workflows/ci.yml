@@ -5,6 +5,9 @@ on:
     branches: [main, "claude/**"]
   pull_request:
   workflow_dispatch:
+  schedule:
+    # Weekly drift check against the upstream OpenProblems repo (Mondays 06:00 UTC).
+    - cron: "0 6 * * 1"
 
 jobs:
   test:
@@ -80,3 +83,20 @@ jobs:
       - name: Lint src/ (report only)
         continue-on-error: true
         run: ruff check src/
+
+  upstream-sync:
+    name: OpenProblems upstream drift (report-only)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      # Compares our context/ pipeline assumptions to the live task repo.
+      # Report-only so it never blocks pushes; the scheduled run surfaces drift.
+      - name: Check upstream layout
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: python scripts/check_upstream_sync.py

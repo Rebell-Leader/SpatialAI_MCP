@@ -45,6 +45,20 @@ This generates the right files for that agent (e.g. `CLAUDE.md` + `.claude/skill
 + `.mcp.json` for Claude Code; `.cursor/rules/*.mdc` + `.cursor/mcp.json` for
 Cursor). See [`installer/README.md`](installer/README.md) for the full mapping.
 
+**Claude Code plugin (one-step alternative):**
+
+```text
+/plugin marketplace add Rebell-Leader/SpatialAI_MCP
+/plugin install openproblems-spatial@openproblems-spatial
+```
+
+This bundles the four skills and the MCP server config as a single plugin. The
+MCP tools still require the `pip install` above (they run the
+`openproblems-mcp-server` console script).
+
+> New here? **[QUICKSTART.md](QUICKSTART.md)** walks you from install to a
+> validated dataset and a scaffolded Viash component in about 5 minutes.
+
 ### Basic Usage
 
 1. **Check server health**:
