@@ -1,0 +1,45 @@
+# Output expected WITH the skill: modern flat Viash config conforming to the
+# task_ist_preprocessing normalization component API and OpenProblems conventions.
+# NOTE: confirm the exact comp_* API path against the live task repo before use.
+__merge__: /src/api/comp_normalization.yaml
+
+name: log_normalization
+label: "Log Normalization"
+summary: "Counts-per-10k normalization followed by log1p."
+description: |
+  Normalizes each cell's expression to counts-per-10,000 (CP10k) and applies a
+  natural-log transform with a pseudocount of 1 (log1p). Operates on the cell-by-gene
+  table of a SpatialData object and writes the normalized layer back.
+
+links:
+  documentation: "https://github.com/openproblems-bio/task_ist_preprocessing"
+  repository: "https://github.com/openproblems-bio/task_ist_preprocessing"
+references:
+  doi: "10.1186/s13059-021-02584-9"
+
+arguments:
+  - name: "--n_target"
+    type: double
+    default: 10000
+    description: "Target counts per cell before log1p (CP10k by default)."
+
+resources:
+  - type: python_script
+    path: script.py
+
+test_resources:
+  - type: python_script
+    path: test.py
+
+engines:
+  - type: docker
+    image: openproblems/base_python:1
+    __merge__:
+      - /src/base/setup_spatialdata_partial.yaml
+  - type: native
+
+runners:
+  - type: executable
+  - type: nextflow
+    directives:
+      label: [midtime, lowcpu, lowmem]
