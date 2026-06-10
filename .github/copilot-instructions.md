@@ -100,8 +100,8 @@ format: YAML frontmatter + markdown). Load the one matching the task:
 
 ## Conventions for changes
 
-- Keep `README.md`, this file, and `.kiro/specs/.../tasks.md` honest about what is
-  actually implemented. If you add or remove a tool, update all three.
+- Keep `README.md` and this file honest about what is actually implemented. If
+  you add or remove a tool, update both (and the tool lists above).
 - Do not advertise execution tools as available until they have code and tests.
 - New skills go in `skills/` and are surfaced everywhere by re-running the
   installer; do not hand-edit the generated provider files.

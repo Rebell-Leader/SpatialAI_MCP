@@ -148,9 +148,10 @@ table reflects exactly what is registered in `server.py` today.
 
 ### 🛣️ Roadmap (NOT yet implemented)
 
-These appear in the design (`project_artifacts/project_details.md`) and the kiro
-task board (`.kiro/specs/production-mcp-server/tasks.md`), but **no code backs
-them yet**. Do not rely on them; an agent that calls them will get an error.
+These appear in the project design notes, but **no code backs them yet**. Do not
+rely on them; an agent that calls them will get an error. The original
+requirements for these live in the archived hackathon spec
+([`docs/archive/kiro-spec-production-mcp-server/`](docs/archive/kiro-spec-production-mcp-server/)).
 
 - Execution: `run_nextflow_workflow`, `run_viash_component`, `build_viash_component`,
   `build_docker_image`, `run_nf_test`
@@ -323,12 +324,13 @@ See [`case-study/README.md`](case-study/README.md).
 - ✅ CI: tests on Python 3.10–3.12, generated-files-in-sync check, upstream-drift check
 
 ### 🚧 Roadmap (not yet implemented)
-- 🚧 In-server pipeline **execution** (Nextflow / Viash / Docker) — kiro Task 3
-- 🚧 Workflow state management & execution history — kiro Task 4
-- 🚧 OpenProblems build / benchmark / submission tools — kiro Task 5
+- 🚧 In-server pipeline **execution** (Nextflow / Viash / Docker)
+- 🚧 Workflow state management & execution history
+- 🚧 OpenProblems build / benchmark / submission tools
 
 Until those land, the agent drives your local `nextflow` / `viash` / `docker`
-CLIs directly. See `.kiro/specs/production-mcp-server/tasks.md` for the task board.
+CLIs directly. Detailed requirements for these are preserved in the archived
+hackathon spec ([`docs/archive/kiro-spec-production-mcp-server/`](docs/archive/kiro-spec-production-mcp-server/)).
 
 ## 📚 Documentation
 
