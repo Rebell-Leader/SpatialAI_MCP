@@ -154,33 +154,51 @@ def install_cursor(src: Sources, dest: Path, written: List[Path]) -> None:
     _write(dest / ".cursor" / "mcp.json", _mcp_json(), written)
 
 
+def _self_contained_md(src: Sources) -> str:
+    """AGENTS.md plus the FULL skill bodies, for agents with no skill auto-load.
+
+    Embedding the bodies (not just an index) ensures the model actually has the
+    playbooks in context — agents like Copilot, Gemini CLI, and Antigravity CLI
+    won't autonomously open the SKILL.md files otherwise.
+    """
+    parts = [GENERATED_BANNER, src.agents_md, "\n\n# Skill playbooks\n"]
+    parts.append("\nLoad the one matching your task; full text follows.\n")
+    for s in src.skills:
+        parts.append(f"\n---\n\n<!-- skill: {s.name} -->\n{s.body.strip()}\n")
+    return "".join(parts)
+
+
 def install_copilot(src: Sources, dest: Path, written: List[Path]) -> None:
     """GitHub Copilot: .github/copilot-instructions.md (self-contained)."""
-    skills_index = "\n".join(f"- **{s.name}**: {s.description}" for s in src.skills)
-    content = (
-        GENERATED_BANNER
-        + src.agents_md
-        + "\n\n## Skill playbooks (in `skills/`)\n\n"
-        + skills_index
-        + "\n"
+    _write(
+        dest / ".github" / "copilot-instructions.md",
+        _self_contained_md(src),
+        written,
     )
-    _write(dest / ".github" / "copilot-instructions.md", content, written)
 
 
 def install_gemini(src: Sources, dest: Path, written: List[Path]) -> None:
     """Gemini CLI: GEMINI.md context file (self-contained) + .gemini/settings.json."""
-    skills_index = "\n".join(f"- **{s.name}**: {s.description}" for s in src.skills)
-    gemini_md = (
-        GENERATED_BANNER
-        + src.agents_md
-        + "\n\n## Skill playbooks (in `skills/`)\n\n"
-        + skills_index
-        + "\n"
-    )
-    _write(dest / "GEMINI.md", gemini_md, written)
+    _write(dest / "GEMINI.md", _self_contained_md(src), written)
     # Gemini CLI reads MCP servers from .gemini/settings.json; the top-level
     # mcpServers shape matches the standard JSON config we emit elsewhere.
     _write(dest / ".gemini" / "settings.json", _mcp_json(), written)
+
+
+def install_antigravity(src: Sources, dest: Path, written: List[Path]) -> None:
+    """Google Antigravity CLI (agy): AGENTS.md + embedded skills + .agents/ config.
+
+    Antigravity reads ``AGENTS.md`` natively and a ``.agents/`` workspace dir.
+    We also write a self-contained context file with full skill bodies (the CLI
+    won't open SKILL.md files on its own) and the MCP config it reads from
+    ``.agents/mcp_config.json``.
+    """
+    if dest.resolve() != src.repo_root.resolve():
+        _write(dest / "AGENTS.md", src.agents_md, written)
+    for skill in src.skills:
+        _copy_skill(skill, dest / ".agents" / "skills", written)
+    _write(dest / ".agents" / "context.md", _self_contained_md(src), written)
+    _write(dest / ".agents" / "mcp_config.json", _mcp_json(), written)
 
 
 @dataclass
@@ -195,5 +213,6 @@ TARGETS = {
     "codex": Target("codex", "OpenAI Codex", install_codex),
     "cursor": Target("cursor", "Cursor", install_cursor),
     "copilot": Target("copilot", "GitHub Copilot", install_copilot),
-    "gemini": Target("gemini", "Gemini CLI", install_gemini),
+    "gemini": Target("gemini", "Gemini CLI (legacy)", install_gemini),
+    "antigravity": Target("antigravity", "Google Antigravity CLI", install_antigravity),
 }

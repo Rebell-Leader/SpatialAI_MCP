@@ -20,7 +20,7 @@ def test_dry_run_returns_zero(capsys):
     rc = run_mod.main(["--config", str(EXAMPLE_CONFIG), "--dry-run"])
     assert rc == 0
     out = capsys.readouterr().out
-    assert "A_gemini_noskill" in out
+    assert "antigravity" in out
     assert "install skill" in out and "strip skill" in out
 
 
@@ -52,13 +52,17 @@ def test_render_table_has_rows():
             "harness": "gemini",
             "model": "m",
             "skill": True,
-            "graded": {"score": 11, "max_score": 11, "static_pass": True},
-            "component": "src/x",
+            "repeats": 3,
+            "scores": [10, 11, 11],
+            "score_median": 11,
+            "score_min": 10,
+            "score_max": 11,
+            "pass_rate": 0.67,
         },
     ]
     table = run_mod.render_table(results)
     assert "| Arm |" in table
-    assert "X" in table and "11/11" in table
+    assert "X" in table and "11/11" in table and "10–11" in table
 
 
 def test_mock_harness_skill_aware(tmp_path):
@@ -104,9 +108,39 @@ def test_mock_end_to_end(tmp_path):
     assert rc == 0
 
     results = json.loads((tmp_path / "runs" / "results.json").read_text())
-    by_arm = {r["arm"]: r["graded"]["score"] for r in results}
+    by_arm = {r["arm"]: r["score_median"] for r in results}
     assert by_arm["skill"] == 11
     assert by_arm["noskill"] == 0
+
+
+def test_repeats_aggregate_with_median(tmp_path):
+    """--repeats runs each arm N times and reports median/range/pass-rate."""
+    config = {
+        "copilot_repo": str(REPO_ROOT),
+        "task_repo": str(tmp_path / "missing"),
+        "workdir": str(tmp_path / "runs"),
+        "arms": [{"name": "skill", "harness": "g", "skill": True,
+                  "agent_target": "gemini"}],
+        "harnesses": {"g": {"command": ["g", "-p", "{prompt}"]}},
+    }
+    cfg_path = tmp_path / "arms.json"
+    cfg_path.write_text(json.dumps(config), encoding="utf-8")
+    rc = run_mod.main(
+        ["--config", str(cfg_path), "--mock-harness", "good", "--repeats", "3"]
+    )
+    assert rc == 0
+    results = json.loads((tmp_path / "runs" / "results.json").read_text())
+    r = results[0]
+    assert r["repeats"] == 3
+    assert r["scores"] == [11, 11, 11]
+    assert r["score_median"] == 11
+    assert r["pass_rate"] == 1.0
+
+
+def test_skill_block_injects_playbooks():
+    block = run_mod._skill_block(REPO_ROOT, None)
+    assert "Reference playbook: viash-component-authoring" in block
+    assert "openproblems/base_python" in block  # body content, not just a name
 
 
 def test_config_paths_are_cwd_independent(tmp_path, monkeypatch):

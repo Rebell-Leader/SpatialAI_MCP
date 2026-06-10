@@ -9,7 +9,7 @@ cd "$DEST"
 rm -rf \
   AGENTS.md CLAUDE.md GEMINI.md QUICKSTART.md \
   skills/ context/ installer/ \
-  .claude/ .codex/ .cursor/ .gemini/ .claude-plugin/ \
+  .claude/ .codex/ .cursor/ .gemini/ .agents/ .claude-plugin/ \
   .github/copilot-instructions.md \
   .mcp.json
 

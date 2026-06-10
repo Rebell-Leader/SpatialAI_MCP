@@ -64,17 +64,39 @@ If the configured `task_repo` doesn't exist, mock mode synthesizes a minimal
 stand-in repo automatically, so the smoke test needs nothing but this repo.
 Swap `--mock-harness ...` for the real run once it looks right.
 
+## How a "skill arm" gets the skill
+
+For skill arms the runner does two things: (1) installs the agent-native files
+(via the installer `agent_target`) and copies `AGENTS.md` + `skills/` + `context/`
+into the workdir, and (2) **injects the skill playbooks into the prompt**
+(`inject_skills: true`). The injection matters because agents differ in whether
+they auto-load skills — Gemini/Antigravity CLI won't open `SKILL.md` files on
+their own. Injecting guarantees the skill *content* reaches the model, so the
+experiment measures the value of the content rather than each agent's discovery
+mechanism. Set `inject_skill_names` to a subset, or `inject_skills: false` to
+test pure auto-load behavior.
+
+## Repeats (beat single-run noise)
+
+Set `repeats` in the config or pass `--repeats N` (N≥3 recommended). Each arm runs
+N times in isolated `…__rep<i>` workdirs; the table reports the **median**, the
+range, and the pass-rate. A single run is an anecdote — a 2-point swing is well
+within sampling noise.
+
 ## Harness setup
 
 The `command` templates in the config are substituted with `{prompt}` and
 `{model}`. Defaults provided:
 
-- **Gemini CLI** — `["gemini", "-y", "-p", "{prompt}"]`. Headless via `-p`; `-y`
-  auto-approves tool calls. Reads `GEMINI.md` + `.gemini/settings.json` (which the
-  `gemini` installer target writes). Auth via `gemini` login or `GEMINI_API_KEY`.
+- **Antigravity CLI** — `["agy", "--yolo", "-p", "{prompt}"]`. Headless via `-p`;
+  `--yolo` auto-approves tool calls. Reads `AGENTS.md` + `.agents/` (the
+  `antigravity` installer target writes `.agents/mcp_config.json` + skills).
+  Note: `agy -p` can emit no stdout when spawned as a subprocess, but it still
+  writes files — which is what the grader reads, so grading is unaffected.
+  (Gemini CLI is still available as the legacy `gemini` harness/target.)
 - **opencode** — `["opencode", "run", "{prompt}", "--model", "{model}"]`. Reads
-  `AGENTS.md` natively (the skill arm copies it in). Use an OpenRouter model id
-  like `openrouter/qwen/qwen3-coder`; set your OpenRouter key per opencode's docs.
+  `AGENTS.md` natively. Use an OpenRouter model id like
+  `openrouter/qwen/qwen3-coder`; set your OpenRouter key per opencode's docs.
 
 Both must be installed and on `PATH` with credentials configured. If a harness
 binary is missing, the arm is recorded as not-run rather than crashing the batch.
@@ -83,15 +105,19 @@ binary is missing, the arm is recorded as not-run rather than crashing the batch
 
 | Arm | Harness | Model | Skill |
 | --- | --- | --- | :---: |
-| A | gemini | commercial Gemini | ❌ |
-| C | gemini | **same** Gemini | ✅ |
+| A | antigravity | commercial Gemini | ❌ |
+| C | antigravity | **same** Gemini | ✅ |
 | B | opencode | OpenRouter OSS | ❌ |
 | C′ | opencode | **same** OSS | ✅ |
 
 The decisive contrast is **same model, skill toggled** (A vs C, B vs C′): it
-isolates the skill's effect. Run N≥3 repeats and grade blind. The runner records
-the conformance score, build/test (with `--run-viash`), and the agent log per
-arm; copy the numbers into `results/RESULTS.md`.
+isolates the skill's effect. Run N≥3 repeats and grade blind. Turn on
+`run_viash: true` so `viash build`/`viash test` give the real correctness signal
+alongside the static rubric. Copy the numbers into `results/RESULTS.md`.
+
+> **Headroom matters.** If your commercial model already scores near 11/11
+> without the skill (ceiling), the skill can't show a lift — focus the
+> comparison on the weaker/OSS model, or choose a less common pipeline stage.
 
 ## Notes
 

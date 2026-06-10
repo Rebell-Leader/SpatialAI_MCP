@@ -107,9 +107,242 @@ format: YAML frontmatter + markdown). Load the one matching the task:
   installer; do not hand-edit the generated provider files.
 
 
-## Skill playbooks (in `skills/`)
+# Skill playbooks
 
-- **nextflow-debugging**: Diagnose a failing Nextflow pipeline run in an OpenProblems benchmark. Use when a `nextflow run` fails, a process errors out, or the user shares a .nextflow.log / .command.err and asks why it broke.
-- **openproblems-submission**: Prepare a spatial transcriptomics method for contribution to an OpenProblems benchmark (e.g. task_ist_preprocessing). Use when the user wants to submit/contribute a method, open a PR to a task_* repo, or check submission readiness.
-- **spatial-data-validation**: Validate and inspect spatial transcriptomics data files (SpatialData/zarr/AnnData) before any analysis. Use when the user points at a spatial data file, reports a loading/format error, or asks whether data is suitable for a method.
-- **viash-component-authoring**: Author or modify a Viash component (config.vsh.yaml + script) for an OpenProblems method, especially a task_ist_preprocessing stage. Use when the user wants to add/implement a spatial method, scaffold a component, or fix a config.vsh.yaml.
+Load the one matching your task; full text follows.
+
+---
+
+<!-- skill: nextflow-debugging -->
+# Nextflow debugging
+
+The server does not yet parse logs for you (`analyze_nextflow_log` is roadmap), so
+triage the logs directly. Be systematic.
+
+## Steps
+
+1. **Find the failing task.** From the run output, note the process name and the
+   work directory hash (`work/ab/cdef...`). The per-task files there are the
+   ground truth:
+   - `.command.sh` — the exact command run.
+   - `.command.err` / `.command.out` — stderr/stdout.
+   - `.command.log`, `.exitcode` — exit status.
+
+2. **Classify the error by exit code / message:**
+   - **137 / OOM-killed** → memory limit. Increase the process `memory` directive
+     or add a dynamic retry (`memory { 8.GB * task.attempt }`).
+   - **127 / "command not found"** → tool missing in the container; fix the
+     component's engine/setup or the image.
+   - **126 / permission denied** → executable bit / entrypoint issue.
+   - **File/path errors** → check channel wiring and input staging; confirm the
+     input file actually exists and matches the expected format
+     (run `validate_spatial_data`).
+   - **Config/DSL errors** → confirm DSL2 syntax; OpenProblems pipelines are DSL2.
+
+3. **Add resilience** where appropriate: `errorStrategy 'retry'`, `maxRetries`,
+   and dynamic resources by `task.attempt`. Don't paper over a real bug with
+   retries.
+
+4. **Reproduce in isolation.** Re-run a single component with `viash run` on the
+   test data before re-running the whole pipeline. Use `-resume` to avoid
+   recomputing successful tasks.
+
+5. **Validate inputs** with `validate_spatial_data` / `analyze_spatial_metadata`
+   when the failure looks data-shaped (wrong format, missing elements,
+   raw-vs-normalized mismatch).
+
+## Output
+
+Report: the failing process, the root-cause class, the evidence (the log line),
+and the specific fix — plus whether it's a data problem, an environment problem,
+or a code problem.
+
+---
+
+<!-- skill: openproblems-submission -->
+# OpenProblems submission
+
+Goal: a Viash component that conforms to a task's API, builds cleanly, passes the
+test profile, and is reproducible — ready for a PR.
+
+## Checklist
+
+1. **Repo setup.** Clone the target `task_*` repo and initialize the `common/`
+   git submodule (`git submodule update --init --recursive`). Read the repo's
+   `CONTRIBUTING` / `README` for current conventions.
+
+2. **Conform to the component API.** Your `config.vsh.yaml` must `__merge__` the
+   correct `comp_<stage>.yaml` interface and match its inputs/outputs and
+   `info`/metadata fields. Run `analyze_workflow_configuration` on the config.
+
+3. **Data contract.** Inputs/outputs are SpatialData (zarr) / AnnData as the stage
+   requires. Validate test data with `validate_spatial_data` and confirm the
+   elements the stage needs are present (`check_spatial_data_compatibility` for
+   multi-file). State raw-vs-normalized expectations explicitly.
+
+4. **Reproducibility.** Build on the shared base images
+   (`openproblems/base_python:1` / `base_r:1`) with `__merge__`-ed setup
+   partials rather than raw `python:*`/`r-base` images. Pin base-image tags and
+   package versions — no unpinned `latest`. Provide the standard metadata
+   (`label`, `summary`, `description`, `links`, `references`/doi) and document
+   every parameter with a default and biological rationale.
+
+5. **Build & test locally** (server doesn't run these — use the terminal):
+   - `viash ns build`
+   - `viash run config.vsh.yaml -- --input <test>.zarr --output tmp/out.zarr`
+   - `viash test config.vsh.yaml` — a unit test (`test_resources`) is expected
+     for every component
+   - `nextflow run main.nf -profile test,docker`
+
+6. **Dependency sanity.** Run `analyze_workflow_dependencies` across the workflow
+   files to catch missing/conflicting containers or libraries.
+
+7. **PR hygiene.** Include test data + expected output, document parameter
+   choices, and confirm CI (GitHub Actions) builds and runs the component.
+
+## Don't
+
+- Don't claim the server can build/benchmark/validate-submission automatically —
+  `build_openproblems_method`, `run_openproblems_benchmark`, and
+  `validate_openproblems_submission` are roadmap. Use the validation/analysis
+  tools that exist, and run the build/benchmark steps via local CLIs.
+
+---
+
+<!-- skill: spatial-data-validation -->
+# Spatial data validation
+
+Validate first, reason second. Never assume a file's format or contents from its
+extension.
+
+## Steps
+
+1. **Detect & validate format.** Call the MCP tool `validate_spatial_data` with
+   the file path. Choose `validation_level`:
+   - `basic` — extension/existence only.
+   - `structure` (default) — format + structural integrity.
+   - `integrity` — deeper content checks.
+   - `domain` — spatial-biology-specific expectations.
+   For several files, use `validate_multiple_spatial_files`.
+
+2. **Read the metadata.** Call `analyze_spatial_metadata` to extract dimensions,
+   spatial coordinates, and gene/feature info. Confirm `obsm['spatial']` (AnnData)
+   or coordinate systems (SpatialData) are present when spatial analysis is
+   intended.
+
+3. **Check raw vs. processed.** Integer-valued matrices are likely raw counts;
+   non-integer/log-scaled values are processed. State which the downstream method
+   expects and flag a mismatch.
+
+4. **Check compatibility** when combining files: `check_spatial_data_compatibility`
+   (coordinate systems + gene overlap).
+
+## Key facts (see `context/data-formats.md`)
+
+- A `.zarr` store is SpatialData **only** if it has SpatialData markers or ≥2 of
+  `images/ labels/ points/ shapes/ tables/`. Otherwise it's a plain zarr array.
+- iST datasets can be terabytes. Default to lightweight structural checks; avoid
+  loading whole objects. The heavy scientific stack (`pip install -e ".[spatial]"`)
+  is optional — the validators degrade gracefully without it.
+
+## Don't
+
+- Don't claim a file is valid SpatialData without inspecting contents.
+- Don't call execution tools (e.g. `run_nextflow_workflow`) — they aren't
+  implemented. Drive local CLIs directly if execution is needed.
+
+---
+
+<!-- skill: viash-component-authoring -->
+# Viash component authoring
+
+A Viash component = a `config.vsh.yaml` (metadata: arguments, resources, engines)
++ a script (Python/R/Bash). Viash compiles it into a CLI, a Docker image, and a
+Nextflow module.
+
+## Steps
+
+1. **Identify the stage and its interface.** OpenProblems components conform to a
+   `comp_*` API merged in via `__merge__: /src/api/comp_<stage>.yaml`. Find the
+   right interface for the pipeline stage you're implementing (see
+   `context/ist-preprocessing-pipeline.md`) and match its inputs/outputs exactly.
+
+2. **Write `config.vsh.yaml`.** Use the modern **flat** config (no
+   `functionality:` wrapper) with `engines:` / `runners:` (not the legacy
+   `platforms:`). Follow OpenProblems conventions: merge the stage API, build on
+   the shared base image with a setup partial, include the standard metadata
+   block, and label the nextflow runner with resource directives. This mirrors a
+   real `task_ist_preprocessing` component:
+
+   ```yaml
+   __merge__: /src/api/comp_<stage>.yaml
+
+   name: my_method
+   label: "My Method"
+   summary: "One-line biological purpose."
+   description: "Longer description with method context."
+   links:
+     documentation: "https://github.com/openproblems-bio/task_ist_preprocessing"
+     repository: "https://github.com/openproblems-bio/task_ist_preprocessing"
+   references:
+     doi: "10.xxxx/xxxxx"        # the method's paper
+
+   arguments:
+     - name: "--some_param"
+       type: double
+       default: 1.0
+       description: "Biologically meaningful parameter."
+   # Note: --input/--output are usually inherited from the merged comp_<stage> API.
+
+   resources:
+     - type: python_script
+       path: script.py
+
+   engines:
+     - type: docker
+       image: openproblems/base_python:1        # shared base, not raw python:*
+       __merge__:
+         - /src/base/setup_spatialdata_partial.yaml   # extra deps via setup partial
+     - type: native
+
+   runners:
+     - type: executable
+     - type: nextflow
+       directives:
+         label: [ midtime, lowcpu, lowmem ]     # resource labels
+   ```
+
+   Confirm the exact `__merge__` paths (the stage API and the base setup partial)
+   and the current Viash schema against the live repo before building — keys
+   evolve between major Viash versions.
+
+3. **Write the script** with the dev parameter block:
+
+   ```python
+   import spatialdata as sd
+
+   ## VIASH START
+   par = {"input": "resources_test/.../dataset.zarr", "output": "output.zarr", "some_param": 1.0}
+   ## VIASH END
+
+   sdata = sd.read_zarr(par["input"])
+   # ... implement; keep coordinate systems consistent ...
+   result.write(par["output"])
+   ```
+
+   Fail loudly: log the error and `sys.exit(1)` on failure.
+
+4. **Validate before building.** Run `analyze_workflow_configuration` on the
+   `config.vsh.yaml` to catch structural/dependency issues.
+
+5. **Build & test** with the user's local Viash (the server does not run it):
+   - `viash ns build`
+   - `viash run config.vsh.yaml -- --input <test>.zarr --output tmp/out.zarr`
+   - unit test: add a `test_resources` script (e.g. `test.py`) to the config and
+     run `viash test config.vsh.yaml` — every OpenProblems component ships a test.
+   - integration: `nextflow run main.nf -profile test,docker`
+
+## Don't
+
+- Don't invent `create_spatial_component` / `build_viash_component` tool calls —
+  they're roadmap, not implemented. Generate files and run `viash` in the terminal.

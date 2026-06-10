@@ -6,29 +6,37 @@
   "workdir": "case-study/runs",
   "prompt_file": "case-study/task/prompt.txt",
   "timeout_seconds": 1800,
+  "repeats": 3,
+  "run_viash": false,
+  "inject_skills": true,
+  "_inject_note": "Skill arms get the playbooks injected into the prompt, so the skill CONTENT reaches the model regardless of whether the agent auto-loads skills. Set 'inject_skill_names' to a subset if you want only some.",
   "harnesses": {
-    "gemini": {
-      "command": ["gemini", "-y", "-p", "{prompt}"],
-      "comment": "Headless Gemini CLI; -y auto-approves tool calls, -p is the prompt."
+    "antigravity": {
+      "command": ["agy", "--yolo", "-p", "{prompt}"],
+      "comment": "Google Antigravity CLI (agy), headless via -p, --yolo auto-approves. Note: agy -p can emit no stdout in a non-TTY subprocess; the agent still writes files, which is what the grader reads."
     },
     "opencode": {
       "command": ["opencode", "run", "{prompt}", "--model", "{model}"],
-      "comment": "Non-interactive opencode; --model takes e.g. openrouter/qwen/qwen3-coder."
+      "comment": "Non-interactive opencode; --model takes e.g. openrouter/qwen/qwen3-coder. Requires opencode configured with an OpenRouter key."
+    },
+    "gemini": {
+      "command": ["gemini", "-y", "-p", "{prompt}"],
+      "comment": "Legacy Gemini CLI (replaced by Antigravity CLI). -y auto-approves, -p is the prompt."
     }
   },
   "arms": [
     {
-      "name": "A_gemini_noskill",
-      "harness": "gemini",
+      "name": "A_antigravity_noskill",
+      "harness": "antigravity",
       "model": "gemini-2.5-pro",
       "skill": false
     },
     {
-      "name": "C_gemini_skill",
-      "harness": "gemini",
+      "name": "C_antigravity_skill",
+      "harness": "antigravity",
       "model": "gemini-2.5-pro",
       "skill": true,
-      "agent_target": "gemini"
+      "agent_target": "antigravity"
     },
     {
       "name": "B_opencode_oss_noskill",
