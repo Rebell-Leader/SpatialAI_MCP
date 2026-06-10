@@ -31,6 +31,7 @@ from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 CASE_STUDY = HERE.parent
+REPO_ROOT = CASE_STUDY.parent
 GRADE_PY = CASE_STUDY / "grade.py"
 STRIP_SH = CASE_STUDY / "scripts" / "strip_skill.sh"
 COPILOT_ASSETS = ("AGENTS.md", "skills", "context")
@@ -44,13 +45,25 @@ _FIXTURE = {
 }
 
 
+def _resolve(base: Path, value: str) -> Path:
+    """Resolve ``value`` as an absolute path, anchoring relatives at ``base``."""
+    p = Path(value).expanduser()
+    return p if p.is_absolute() else base / p
+
+
 def _load_config(path: Path) -> dict:
     cfg = json.loads(path.read_text(encoding="utf-8"))
-    cfg.setdefault("workdir", "case-study/runs")
     cfg.setdefault("component_name", "log_normalization")
     cfg.setdefault("timeout_seconds", 1800)
-    cfg.setdefault("prompt_file", "case-study/task/prompt.txt")
     cfg.setdefault("run_viash", False)
+    # Resolve paths against the repo root (derived from this script's location),
+    # NOT the current working directory, so the runner works from any directory.
+    copilot_repo = _resolve(REPO_ROOT, cfg.get("copilot_repo", ".")).resolve()
+    cfg["copilot_repo"] = str(copilot_repo)
+    cfg["workdir"] = str(_resolve(REPO_ROOT, cfg.get("workdir", "case-study/runs")))
+    cfg["prompt_file"] = str(
+        _resolve(copilot_repo, cfg.get("prompt_file", "case-study/task/prompt.txt"))
+    )
     return cfg
 
 
@@ -185,7 +198,7 @@ def grade_component(
 def run_arm(
     cfg: dict, arm: dict, copilot_repo: Path, dry_run: bool, mock: str | None = None
 ) -> dict:
-    prompt = (copilot_repo / cfg["prompt_file"]).read_text(encoding="utf-8").strip()
+    prompt = Path(cfg["prompt_file"]).read_text(encoding="utf-8").strip()
     result = {
         "arm": arm["name"],
         "harness": arm["harness"],
@@ -278,19 +291,40 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
 
     cfg = _load_config(args.config)
-    copilot_repo = Path(cfg.get("copilot_repo", ".")).resolve()
+    copilot_repo = Path(cfg["copilot_repo"])
+
+    task_repo_val = str(cfg.get("task_repo", "")).strip()
+    task_repo = Path(task_repo_val).expanduser() if task_repo_val else None
 
     # In mock mode, synthesize a stand-in task repo if the configured one is absent
     # so the full prepare->run->grade pipeline runs with no external dependencies.
     if args.mock_harness and not args.dry_run:
-        task_repo = Path(cfg["task_repo"]).expanduser()
-        if not task_repo.exists():
-            synth = Path(cfg["workdir"]).resolve() / "_mock_task_repo"
+        if task_repo is None or not task_repo.exists():
+            synth = Path(cfg["workdir"]) / "_mock_task_repo"
             if synth.exists():
                 shutil.rmtree(synth)
             _synthesize_task_repo(synth)
             cfg["task_repo"] = str(synth)
             print(f"(mock) synthesized stand-in task repo at {synth}")
+    # Real run: fail early and clearly if task_repo is the unedited placeholder.
+    elif not args.dry_run:
+        if (
+            not task_repo_val
+            or task_repo_val.startswith("/path/to/")
+            or task_repo is None
+            or not task_repo.exists()
+        ):
+            print(
+                "❌ 'task_repo' is not set to a real checkout "
+                f"(current value: {task_repo_val or '(missing)'}).\n"
+                "   Edit your arms config and point it at a local clone of\n"
+                "   openproblems-bio/task_ist_preprocessing, for example:\n"
+                '       "task_repo": "/home/you/task_ist_preprocessing"\n'
+                "   Or smoke-test the pipeline offline first with no clone:\n"
+                "       --mock-harness skill-aware",
+                file=sys.stderr,
+            )
+            return 2
 
     arms = cfg["arms"]
     if args.only:

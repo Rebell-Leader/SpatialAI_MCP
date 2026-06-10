@@ -23,7 +23,8 @@ this runner deliberately doesn't fake those.
 
 ```bash
 cp case-study/runner/arms.example.json case-study/runner/arms.json
-# edit arms.json: set task_repo to your task_ist_preprocessing clone, set models
+# REQUIRED: edit arms.json -> set "task_repo" to your task_ist_preprocessing
+# clone (and set the models). A real run errors clearly if it's left unset.
 
 # validate the plan without running anything:
 python case-study/runner/run.py --config case-study/runner/arms.json --dry-run
@@ -34,6 +35,11 @@ python case-study/runner/run.py --config case-study/runner/arms.json
 ```
 
 Output: `case-study/runs/results.json` and `results.md`.
+
+> **Run it from anywhere.** Paths in the config (`copilot_repo`, `workdir`,
+> `prompt_file`) resolve against the repo root, not your current directory — so
+> `python runner/run.py ...` from inside `case-study/` works too. Only the
+> `--config` path itself is taken relative to your shell's working directory.
 
 ## Smoke-test offline first (no tokens, no setup)
 
