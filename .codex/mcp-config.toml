@@ -1,0 +1,5 @@
+# Append to ~/.codex/config.toml to register the MCP server.
+[mcp_servers.openproblems-spatial]
+command = "openproblems-mcp-server"
+args = []
+env = { OPENPROBLEMS_MCP_LOG_LEVEL = "INFO" }

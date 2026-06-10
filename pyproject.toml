@@ -64,6 +64,7 @@ spatial = [
 [project.scripts]
 openproblems-mcp = "openproblems_mcp.cli:main"
 openproblems-mcp-server = "openproblems_mcp.main:main"
+spatialai-install = "installer.cli:main"
 
 [project.urls]
 Homepage = "https://github.com/openproblems-bio/SpatialAI_MCP"
@@ -71,8 +72,12 @@ Documentation = "https://github.com/openproblems-bio/SpatialAI_MCP/docs"
 Repository = "https://github.com/openproblems-bio/SpatialAI_MCP"
 Issues = "https://github.com/openproblems-bio/SpatialAI_MCP/issues"
 
-[tool.setuptools.packages.find]
-where = ["src"]
+[tool.setuptools]
+packages = ["openproblems_mcp", "installer"]
+
+[tool.setuptools.package-dir]
+openproblems_mcp = "src/openproblems_mcp"
+installer = "installer"
 
 [tool.black]
 line-length = 88
