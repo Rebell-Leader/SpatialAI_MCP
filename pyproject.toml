@@ -47,9 +47,18 @@ dependencies = [
 dev = [
     "pytest>=7.0.0",
     "pytest-asyncio>=0.21.0",
+    "pytest-mock>=3.10.0",
     "black>=23.0.0",
     "ruff>=0.1.0",
     "mypy>=1.0.0",
+]
+# Optional heavy scientific stack, only needed for deep spatial-data inspection.
+# The server degrades gracefully to lightweight structural checks when absent.
+spatial = [
+    "spatialdata",
+    "zarr",
+    "anndata",
+    "h5py",
 ]
 
 [project.scripts]
@@ -83,8 +92,13 @@ no_implicit_optional = true
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+pythonpath = ["src"]
 python_files = ["test_*.py"]
 python_classes = ["Test*"]
 python_functions = ["test_*"]
 addopts = "-v --tb=short"
 asyncio_mode = "auto"
+filterwarnings = [
+    "ignore::pytest.PytestConfigWarning",
+    "ignore::pytest.PytestUnknownMarkWarning",
+]

@@ -103,41 +103,48 @@ graph TB
     style Continue fill:#e8f5e8
 ```
 
-## 🔧 Available Tools
+## 🔧 Tools
 
-### Core Infrastructure
-- `health_check`: Check server and tool status
-- `list_tools_status`: List bioinformatics tool availability
+The server currently exposes **read-only analysis and validation** tools. It does
+not yet execute pipelines — execution tools are on the roadmap (see below). The
+table reflects exactly what is registered in `server.py` today.
+
+### ✅ Available now
+
+**Core infrastructure**
+- `health_check`: Check server and detected-tool status
+- `list_tools_status`: List bioinformatics tool availability with install hints
 - `get_server_info`: Get server configuration details
 
-### Bioinformatics Execution (Planned)
-- `run_nextflow_workflow`: Execute Nextflow pipelines locally
-- `build_viash_component`: Build Viash components
-- `execute_viash_component`: Run Viash components
-- `build_docker_image`: Build Docker images
+**Spatial transcriptomics validation & analysis**
+- `validate_spatial_data`: Validate SpatialData / zarr / AnnData format integrity
+- `validate_multiple_spatial_files`: Batch-validate files with summary statistics
+- `analyze_spatial_metadata`: Extract spatial coordinates and gene/feature metadata
+- `check_spatial_data_compatibility`: Check files for joint-analysis compatibility
+- `extract_bioinformatics_metadata`: Extract metadata from Nextflow/Viash/spatial files
+- `analyze_workflow_configuration`: Analyze Nextflow/Viash config structure & deps
+- `assess_data_quality`: Cross-file data-quality assessment
+- `analyze_workflow_dependencies`: Find dependency requirements/conflicts across files
 
-### Spatial Transcriptomics (Planned)
-- `validate_spatial_data`: Validate SpatialData/zarr/AnnData formats
-- `analyze_spatial_metadata`: Extract spatial data metadata
-- `setup_spatial_environment`: Generate conda/pip environments
-- `create_spatial_component`: Generate Viash components for spatial methods
+### 🛣️ Roadmap (NOT yet implemented)
 
-### OpenProblems Integration (Planned)
-- `analyze_openproblems_repo`: Analyze repository structure
-- `build_openproblems_method`: Build methods with OpenProblems framework
-- `run_openproblems_benchmark`: Execute benchmarks
-- `validate_openproblems_submission`: Validate submissions
+These appear in the design (`project_artifacts/project_details.md`) and the kiro
+task board (`.kiro/specs/production-mcp-server/tasks.md`), but **no code backs
+them yet**. Do not rely on them; an agent that calls them will get an error.
 
-### Workflow Management (Planned)
-- `get_execution_status`: Check workflow status
-- `cancel_execution`: Cancel running workflows
-- `get_execution_history`: View execution history
+- Execution: `run_nextflow_workflow`, `run_viash_component`, `build_viash_component`,
+  `build_docker_image`, `run_nf_test`
+- Troubleshooting: `analyze_nextflow_log`
+- Authoring: `create_spatial_component`, `setup_spatial_environment`
+- OpenProblems: `analyze_openproblems_repo`, `build_openproblems_method`,
+  `run_openproblems_benchmark`, `validate_openproblems_submission`
+- Workflow state: `get_execution_status`, `cancel_execution`, `get_execution_history`
 
 ## 📊 Available Resources
 
 - `config://server`: Server configuration (JSON)
 - `status://tools`: Tool detection status (JSON)
-- `status://health`: OverON)health status (JSON)
+- `status://health`: Overall health status (JSON)
 
 ## ⚙️ Configuration
 
@@ -264,19 +271,21 @@ src/openproblems_mcp/
 
 ## 🚦 Current Status
 
-### ✅ Completed (Task 1)
-- ✅ Clean Python package structure
-- ✅ FastMCP-based server architecture
-- ✅ Comprehensive logging and configuration
-- ✅ Local tool detection and validation
-- ✅ Pip-installable with CLI commands
+### ✅ Implemented
+- ✅ Clean Python package structure, pip-installable with CLI commands
+- ✅ FastMCP-based server architecture (stdio)
+- ✅ Logging, configuration management, local tool detection
 - ✅ Health monitoring and status reporting
+- ✅ Spatial data validation (SpatialData / zarr / AnnData) — kiro Task 2.1
+- ✅ Bioinformatics metadata extraction & workflow-config analysis — kiro Task 2.2
 
-### 🚧 In Development
-- 🚧 Bioinformatics tool execution (Task 2)
-- 🚧 Spatial data validation (Task 3)
-- 🚧 OpenProblems integration (Task 4)
-- 🚧 Workflow state management (Task 5)
+### 🚧 Roadmap (not yet implemented)
+- 🚧 Local bioinformatics tool execution: Nextflow / Viash / Docker — kiro Task 3
+- 🚧 Workflow state management & execution history — kiro Task 5
+- 🚧 OpenProblems ecosystem integration — kiro Task 5
+- 🚧 Provider-agnostic skill installer (Claude, Codex, Cursor, Copilot) — see `installer/`
+
+See `.kiro/specs/production-mcp-server/tasks.md` for the full task board.
 
 ## 🤝 Why FastMCP?
 

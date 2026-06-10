@@ -34,7 +34,7 @@
 
 
 
-  - [ ] 2.2 Add bioinformatics metadata extraction and analysis
+  - [x] 2.2 Add bioinformatics metadata extraction and analysis
 
 
     - Implement metadata extraction for spatial transcriptomics data formats
