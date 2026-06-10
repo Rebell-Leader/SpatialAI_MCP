@@ -278,8 +278,17 @@ edit `AGENTS.md` / `skills/` and re-run `spatialai-install`, not those files.
 ## 📋 Requirements
 
 ### System Requirements
-- Python 3.8 or higher
+- Python 3.10 or higher (required by the `fastmcp` dependency)
 - Operating System: Linux, macOS, or Windows
+
+## 🔬 Case study: does the skill close the model gap?
+
+[`case-study/`](case-study/) is a runnable experiment that tests whether an
+open-source model **with** this skill can match a frontier commercial model
+**without** it on a real `task_ist_preprocessing` task — at fewer agent steps and
+fewer human validations. It ships the frozen task, an objective rubric, an
+automated grader (`case-study/grade.py`), and reference components that bracket
+the rubric. See [`case-study/README.md`](case-study/README.md).
 
 ### Optional Tools (Auto-detected)
 - **Nextflow**: For pipeline execution

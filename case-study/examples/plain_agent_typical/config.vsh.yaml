@@ -1,0 +1,24 @@
+# Typical output of a general coding agent WITHOUT the skill.
+# It looks plausible but violates current OpenProblems/Viash conventions.
+# This fixture exists to exercise the rubric's failing branches.
+functionality:
+  name: log_normalization
+  description: Log-normalize the expression matrix.
+  arguments:
+    - name: "--input"
+      type: file
+      required: true
+    - name: "--output"
+      type: file
+      required: true
+  resources:
+    - type: python_script
+      path: script.py
+
+platforms:
+  - type: docker
+    image: python:3.11
+    setup:
+      - type: python
+        packages: [scanpy, anndata]
+  - type: native
