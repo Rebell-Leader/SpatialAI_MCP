@@ -1,43 +1,49 @@
-# OpenProblems Spatial Transcriptomics MCP Server
+# OpenProblems Spatial Transcriptomics Co-pilot
 
-A production-ready Model Context Protocol (MCP) server for OpenProblems spatial transcriptomics workflows, built with [FastMCP 2.0](https://gofastmcp.com/) and designed to work seamlessly with Continue.dev in VSCode.
+An AI co-pilot for computational biologists working on the
+[OpenProblems](https://openproblems.bio) spatial transcriptomics benchmarks. It
+ships two complementary pieces:
+
+1. **An MCP server** (`src/openproblems_mcp/`) — domain-aware validation and
+   analysis tools, built with [FastMCP](https://gofastmcp.com/) and exposed over
+   the Model Context Protocol so any MCP-capable agent can use them.
+2. **A provider-agnostic skill installer** (`installer/`) — author rules, skills,
+   and domain context **once** (`AGENTS.md`, `skills/`, `context/`) and install
+   them into Claude Code, OpenAI Codex, Cursor, or GitHub Copilot.
 
 ## 🎯 Purpose
 
-This MCP server provides **bioinformatics-specific tools** that complement Continue.dev's built-in capabilities, focusing on:
+Provide **bioinformatics-specific capability** that complements an agent's
+built-in file/terminal/git tools, focusing on:
 
-- **Spatial transcriptomics domain expertise** (data validation, method development)
-- **Bioinformatics tool execution** (Nextflow, Viash, Docker)
-- **OpenProblems ecosystem integration** (benchmarking, method validation)
-- **Workflow state management** (long-running pipeline tracking)
+- **Spatial transcriptomics domain expertise** (data validation, metadata analysis)
+- **OpenProblems ecosystem alignment** (SpatialData/zarr, Viash, the iST pipeline)
+- **Portable agent setup** (one set of rules/skills, every major coding agent)
 
-> **Note**: This server does NOT duplicate Continue.dev's built-in file operations, terminal commands, or git functionality. Instead, it provides specialized bioinformatics capabilities that work alongside Continue.dev's existing tools.
+> The server does NOT duplicate an agent's built-in file operations, terminal
+> commands, or git functionality. It adds specialized analysis that works
+> alongside them. Pipeline *execution* is on the roadmap — see Tools below.
 
 ## 🚀 Quick Start
 
 ### Installation
 
 ```bash
-pip install openproblems-spatial-mcp
+pip install -e .          # from a clone; provides both CLI entry points
 ```
 
-### Continue.dev Configuration
+### Set up your agent (provider-agnostic)
 
-Add to your Continue.dev configuration (`~/.continue/config.json`):
+Install the rules, skills, and MCP config into whichever agent you use:
 
-```json
-{
-  "mcpServers": {
-    "openproblems-spatial": {
-      "command": "openproblems-mcp-server",
-      "args": [],
-      "env": {
-        "OPENPROBLEMS_MCP_LOG_LEVEL": "INFO"
-      }
-    }
-  }
-}
+```bash
+spatialai-install list                       # see targets and skills
+spatialai-install install --target claude    # or codex / cursor / copilot / all
 ```
+
+This generates the right files for that agent (e.g. `CLAUDE.md` + `.claude/skills/`
++ `.mcp.json` for Claude Code; `.cursor/rules/*.mdc` + `.cursor/mcp.json` for
+Cursor). See [`installer/README.md`](installer/README.md) for the full mapping.
 
 ### Basic Usage
 
@@ -46,61 +52,59 @@ Add to your Continue.dev configuration (`~/.continue/config.json`):
    openproblems-mcp check
    ```
 
-2. **Start the server** (usually automatic via Continue.dev):
+2. **Start the server** (usually launched automatically by your agent over stdio):
    ```bash
    openproblems-mcp-server
    ```
 
-3. **Initialize configuration**:
+3. **Initialize server configuration**:
    ```bash
    openproblems-mcp init
    ```
 
 ## 🏗️ Architecture
 
-The system operates as invisible local infrastructure in your development environment:
+The co-pilot has two layers: provider-neutral **assets** that the installer
+projects into each agent, and the **MCP server** that any agent then calls.
 
 ```mermaid
 graph TB
-    subgraph "Development Environment"
-        subgraph "IDE"
-            VSCode[VSCode IDE]
-            Continue[Continue.dev Extension]
-            VSCode --> Continue
-        end
-
-        subgraph "MCP Server (Local Process)"
-            MCP[FastMCP Server]
-            Tools[Bioinformatics Tools]
-            State[Workflow State]
-            MCP --> Tools
-            MCP --> State
-        end
-
-        subgraph "Local Tools"
-            Nextflow[Nextflow]
-            Viash[Viash]
-            Docker[Docker]
-            Git[Git]
-        end
-
-        subgraph "User Files"
-            Workspace[Project Files]
-            Data[Spatial Data]
-            Configs[Configurations]
-        end
+    subgraph Canonical["Canonical assets (author once)"]
+        Agents[AGENTS.md]
+        Skills[skills/*/SKILL.md]
+        Ctx[context/*.md]
     end
 
-    Continue -.->|MCP Protocol| MCP
-    Tools --> Nextflow
-    Tools --> Viash
-    Tools --> Docker
-    State -.-> Workspace
-    MCP -.-> Data
+    Installer[["installer/ (spatialai-install)"]]
+    Agents --> Installer
+    Skills --> Installer
+    Ctx --> Installer
 
+    subgraph Agents_["AI coding agents"]
+        Claude[Claude Code]
+        Codex[OpenAI Codex]
+        Cursor[Cursor]
+        Copilot[GitHub Copilot]
+    end
+    Installer -->|CLAUDE.md, .claude/skills, .mcp.json| Claude
+    Installer -->|AGENTS.md, .codex/skills| Codex
+    Installer -->|.cursor/rules, .cursor/mcp.json| Cursor
+    Installer -->|.github/copilot-instructions.md| Copilot
+
+    subgraph Server["MCP server (local process)"]
+        MCP[FastMCP Server]
+        Val[Validation & analysis tools]
+        MCP --> Val
+    end
+    Claude -.->|MCP protocol| MCP
+    Codex -.->|MCP protocol| MCP
+    Cursor -.->|MCP protocol| MCP
+
+    Val -.-> Data[(Spatial data:\nSpatialData/zarr, AnnData)]
+
+    style Installer fill:#e1f5fe
     style MCP fill:#e1f5fe
-    style Tools fill:#f3e5f5
-    style Continue fill:#e8f5e8
+    style Val fill:#f3e5f5
 ```
 
 ## 🔧 Tools
@@ -182,47 +186,40 @@ tools:
 - `OPENPROBLEMS_MCP_VIASH_EXECUTABLE`: Viash executable path
 - `OPENPROBLEMS_MCP_DOCKER_EXECUTABLE`: Docker executable path
 
-## 🔄 Integration with Continue.dev
+## 🔄 How it complements your agent
 
-This server **complements** Continue.dev's built-in tools:
+This co-pilot **complements** an agent's built-in tools rather than duplicating
+them. The agent handles file I/O, search, terminal, and git; the co-pilot adds:
 
-### Continue.dev Built-ins (We DON'T duplicate)
-- File operations (`read_file`, `create_new_file`)
-- Search operations (`exact_search`, `file_glob_search`)
-- Terminal commands (`run_terminal_command`)
-- Git operations (`view_diff`)
-- Directory operations (`view_subdirectory`)
-
-### Our Specialized Tools (Unique value)
-- Bioinformatics tool execution and management
-- Spatial transcriptomics domain expertise
-- OpenProblems ecosystem integration
-- Long-running workflow state management
-- Domain-specific error analysis and remediation
+- Spatial transcriptomics domain expertise (validation, metadata, compatibility)
+- OpenProblems ecosystem alignment (SpatialData/zarr, Viash, the iST pipeline)
+- Portable, provider-neutral rules and skills via the installer
 
 ## 🧬 Use Cases
 
-### Spatial Transcriptomics Method Development
+### Spatial transcriptomics method development
 ```
-Continue.dev Agent: "I need to develop a spatial clustering method"
+You: "Help me add a segmentation method to task_ist_preprocessing"
 ↓
-1. Agent uses Continue.dev's file tools to read existing code
-2. Agent calls our validate_spatial_data to check test data
-3. Agent calls our create_spatial_component to generate Viash component
-4. Agent uses Continue.dev's terminal to run tests
-5. Agent calls our build_openproblems_method to prepare submission
+1. Agent reads existing code with its own file tools
+2. Agent loads the viash-component-authoring skill (installed from skills/)
+3. Agent calls validate_spatial_data to check the test data
+4. Agent scaffolds the config.vsh.yaml + script, then runs `viash` in the terminal
+5. Agent calls analyze_workflow_configuration to check the config before building
 ```
 
-### Nextflow Pipeline Development
+### Debugging a benchmark run
 ```
-Continue.dev Agent: "Let's optimize this Nextflow pipeline"
+You: "This nextflow run failed, why?"
 ↓
-1. Agent uses Continue.dev's file tools to read pipeline code
-2. Agent calls our run_nextflow_workflow to test execution
-3. Agent calls our get_execution_status to monitor progress
-4. Agent uses Continue.dev's diff tools to review changes
-5. Agent calls our validate_openproblems_submission to check compliance
+1. Agent loads the nextflow-debugging skill
+2. Agent inspects the failing task's work-dir logs with its terminal tools
+3. Agent calls validate_spatial_data if the failure looks data-shaped
+4. Agent reports root cause (OOM / missing tool / data format) and the fix
 ```
+
+> Execution tools (`run_nextflow_workflow`, etc.) are roadmap; today the agent
+> drives the user's local `nextflow`/`viash`/`docker` CLIs directly.
 
 ## 🛠️ Development
 
@@ -246,15 +243,23 @@ ruff check src/
 ### Project Structure
 
 ```
-src/openproblems_mcp/
-├── __init__.py          # Package initialization
-├── main.py              # Main entry point
-├── server.py            # FastMCP server core
-├── cli.py               # CLI commands
-├── config.py            # Configuration management
-├── tool_detection.py    # Tool detection logic
-└── exceptions.py        # Error handling
+AGENTS.md                    # Canonical, provider-neutral agent rules (source of truth)
+skills/                      # On-demand task playbooks (shared SKILL.md format)
+context/                     # OpenProblems facts, data-format & pipeline contracts
+installer/                   # Provider-agnostic skill installer (spatialai-install)
+src/openproblems_mcp/        # The MCP server
+├── server.py                #   FastMCP server core (tool/resource registration)
+├── spatial_validation.py    #   SpatialData/zarr/AnnData validation
+├── metadata_analysis.py     #   Bioinformatics metadata extraction
+├── spatial_tools.py         #   Tool wrappers exposed over MCP
+├── tool_detection.py        #   Local tool detection
+├── config.py / cli.py / main.py / exceptions.py
+tests/                       # pytest suite (server, validation, metadata, installer)
 ```
+
+Generated per-agent files (`CLAUDE.md`, `.claude/`, `.codex/`, `.cursor/`,
+`.github/copilot-instructions.md`, `.mcp.json`) are produced by the installer —
+edit `AGENTS.md` / `skills/` and re-run `spatialai-install`, not those files.
 
 ## 📋 Requirements
 
