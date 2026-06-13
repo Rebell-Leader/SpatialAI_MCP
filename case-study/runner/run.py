@@ -10,13 +10,19 @@ This measures the **zero-intervention** scenario (one prompt, no operator help) 
 the cleanest automated signal. The "human validations" metric comes from
 *interactive* runs the operator does by hand (see case-study/README.md).
 
+Skill arms get the project playbooks injected into the prompt (config
+``inject_skills``, default true), so the skill *content* reaches the model
+regardless of whether the agent auto-loads skills. Use ``repeats`` / ``--repeats``
+(>=3 recommended) to report a median and beat single-run noise.
+
 Examples:
     python case-study/runner/run.py --config case-study/runner/arms.json
-    python case-study/runner/run.py --config arms.json --only C_gemini_skill
+    python case-study/runner/run.py --config arms.json --only C_antigravity_skill
+    python case-study/runner/run.py --config arms.json --repeats 3
     python case-study/runner/run.py --config arms.json --dry-run
 
-Requires: the chosen harness CLI (e.g. `gemini`, `opencode`) on PATH with
-credentials configured. Use --dry-run to validate the plan without running them.
+Requires: the chosen harness CLI (e.g. `agy` for Antigravity, `opencode`) on PATH
+with credentials configured. Use --dry-run to validate the plan without running.
 """
 
 from __future__ import annotations
@@ -24,6 +30,7 @@ from __future__ import annotations
 import argparse
 import json
 import shutil
+import statistics
 import subprocess
 import sys
 import time
@@ -51,6 +58,33 @@ def _resolve(base: Path, value: str) -> Path:
     return p if p.is_absolute() else base / p
 
 
+def _skill_block(copilot_repo: Path, names: list[str] | None) -> str:
+    """Concatenate skill bodies to inject into a skill-arm prompt.
+
+    Agents differ in whether they auto-load skills (Gemini/Antigravity CLI won't
+    open SKILL.md files on their own). Injecting the relevant playbooks into the
+    prompt guarantees the skill *content* reaches the model, so the experiment
+    measures the value of the content, not each agent's discovery mechanism.
+    """
+    skills_dir = copilot_repo / "skills"
+    blocks = []
+    for skill_md in sorted(skills_dir.glob("*/SKILL.md")):
+        name = skill_md.parent.name
+        if names and name not in names:
+            continue
+        text = skill_md.read_text(encoding="utf-8", errors="ignore")
+        if text.startswith("---"):  # strip YAML frontmatter
+            parts = text.split("---", 2)
+            text = parts[2] if len(parts) == 3 else text
+        blocks.append(f"\n\n## Reference playbook: {name}\n{text.strip()}")
+    if not blocks:
+        return ""
+    return (
+        "\n\n---\nThe following project reference playbooks describe the required "
+        "conventions. Follow them.\n" + "".join(blocks)
+    )
+
+
 def _load_config(path: Path) -> dict:
     cfg = json.loads(path.read_text(encoding="utf-8"))
     cfg.setdefault("component_name", "log_normalization")
@@ -71,9 +105,9 @@ def _ignore_heavy(_dir, names):
     return {n for n in names if n in {".git", "node_modules", "__pycache__", ".venv"}}
 
 
-def prepare_workdir(cfg: dict, arm: dict, copilot_repo: Path) -> Path:
+def prepare_workdir(cfg: dict, arm: dict, copilot_repo: Path, label: str) -> Path:
     """Copy the task repo and install/strip the skill for this arm."""
-    workdir = Path(cfg["workdir"]).resolve() / arm["name"]
+    workdir = Path(cfg["workdir"]).resolve() / label
     if workdir.exists():
         shutil.rmtree(workdir)
     task_repo = Path(cfg["task_repo"]).expanduser().resolve()
@@ -196,9 +230,19 @@ def grade_component(
 
 
 def run_arm(
-    cfg: dict, arm: dict, copilot_repo: Path, dry_run: bool, mock: str | None = None
+    cfg: dict,
+    arm: dict,
+    copilot_repo: Path,
+    dry_run: bool,
+    mock: str | None = None,
+    repeat_idx: int | None = None,
 ) -> dict:
     prompt = Path(cfg["prompt_file"]).read_text(encoding="utf-8").strip()
+    # Skill arms get the playbooks injected into the prompt, so the skill content
+    # reaches the model regardless of whether the agent auto-loads skills.
+    if arm.get("skill") and cfg.get("inject_skills", True):
+        prompt += _skill_block(copilot_repo, cfg.get("inject_skill_names"))
+    label = arm["name"] if repeat_idx is None else f"{arm['name']}__rep{repeat_idx}"
     result = {
         "arm": arm["name"],
         "harness": arm["harness"],
@@ -213,8 +257,9 @@ def run_arm(
         )
         cmd = cfg["harnesses"][arm["harness"]]["command"]
         result["plan"] = {
-            "workdir": str(Path(cfg["workdir"]) / arm["name"]),
+            "workdir": str(Path(cfg["workdir"]) / label),
             "prep": action,
+            "inject_skills": bool(arm.get("skill") and cfg.get("inject_skills", True)),
             "command": (
                 f"<mock:{mock}>"
                 if mock
@@ -228,7 +273,7 @@ def run_arm(
         }
         return result
 
-    workdir = prepare_workdir(cfg, arm, copilot_repo)
+    workdir = prepare_workdir(cfg, arm, copilot_repo, label)
     if mock:
         run_info = mock_harness(arm, workdir, mock)
     else:
@@ -244,20 +289,56 @@ def run_arm(
     return result
 
 
+def run_arm_repeated(
+    cfg: dict, arm: dict, copilot_repo: Path, mock: str | None, repeats: int
+) -> dict:
+    """Run an arm ``repeats`` times and aggregate (median + range + pass rate)."""
+    runs = [
+        run_arm(
+            cfg,
+            arm,
+            copilot_repo,
+            dry_run=False,
+            mock=mock,
+            repeat_idx=(i if repeats > 1 else None),
+        )
+        for i in range(repeats)
+    ]
+    scores = [r["graded"].get("score", 0) for r in runs]
+    passes = [bool(r["graded"].get("static_pass")) for r in runs]
+    return {
+        "arm": arm["name"],
+        "harness": arm["harness"],
+        "model": arm.get("model"),
+        "skill": bool(arm.get("skill")),
+        "repeats": repeats,
+        "scores": scores,
+        "score_median": statistics.median(scores),
+        "score_min": min(scores),
+        "score_max": max(scores),
+        "pass_rate": round(sum(passes) / repeats, 2),
+        "runs": runs,
+    }
+
+
 def render_table(results: list[dict]) -> str:
     rows = [
-        "| Arm | Harness | Model | Skill | Score /11 | Pass | Component |",
-        "| --- | --- | --- | :---: | :---: | :---: | --- |",
+        "| Arm | Harness | Model | Skill | Median /11 | Range | Pass-rate | N |",
+        "| --- | --- | --- | :---: | :---: | :---: | :---: | :---: |",
     ]
     for r in results:
-        g = r.get("graded", {})
-        score = g.get("score", "—")
-        mx = g.get("max_score", 11)
-        passed = "✅" if g.get("static_pass") else "❌"
-        comp = r.get("component", g.get("note", "—"))
+        median = r.get("score_median", "—")
+        lo, hi = r.get("score_min"), r.get("score_max")
+        rng = (
+            f"{lo}–{hi}"
+            if lo is not None and lo != hi
+            else (str(lo) if lo is not None else "—")
+        )
+        pass_rate = f"{int(round(r['pass_rate'] * 100))}%" if "pass_rate" in r else "—"
         rows.append(
             f"| {r['arm']} | {r['harness']} | {r.get('model','')} | "
-            f"{'✅' if r['skill'] else '❌'} | {score}/{mx} | {passed} | {comp} |"
+            f"{'✅' if r['skill'] else '❌'} | {median}/11 | {rng} | "
+            f"{pass_rate} | {r.get('repeats', 1)} |"
         )
     return "\n".join(rows)
 
@@ -287,6 +368,13 @@ def main(argv: list[str] | None = None) -> int:
         help="Use a fake agent instead of a real CLI (smoke test). "
         "'skill-aware' produces a good component when skill assets are present, "
         "else a bad one.",
+    )
+    parser.add_argument(
+        "--repeats",
+        type=int,
+        default=None,
+        help="Runs per arm (overrides config 'repeats'; default 1). Use >=3 to "
+        "report a median and beat single-run noise.",
     )
     args = parser.parse_args(argv)
 
@@ -333,13 +421,18 @@ def main(argv: list[str] | None = None) -> int:
             print(f"❌ no arms match {args.only}", file=sys.stderr)
             return 2
 
-    results = [
-        run_arm(cfg, arm, copilot_repo, args.dry_run, args.mock_harness) for arm in arms
-    ]
-
     if args.dry_run:
+        results = [
+            run_arm(cfg, arm, copilot_repo, True, args.mock_harness) for arm in arms
+        ]
         print(json.dumps(results, indent=2))
         return 0
+
+    repeats = max(1, args.repeats or int(cfg.get("repeats", 1)))
+    results = [
+        run_arm_repeated(cfg, arm, copilot_repo, args.mock_harness, repeats)
+        for arm in arms
+    ]
 
     out_dir = Path(cfg["workdir"]).resolve()
     out_dir.mkdir(parents=True, exist_ok=True)
